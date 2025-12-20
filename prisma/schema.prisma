@@ -1,0 +1,92 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+  enum Role {
+    CUSTOMER
+    SUPER_ADMIN
+    OUTLET_ADMIN
+    WORKER
+    DRIVER
+  }
+
+  enum Worker_Type {
+    WASHING
+    IRONING
+    PACKING
+  }
+
+model User {
+  id                  String @id @default(uuid())
+  name                String
+  email               String @unique
+  password            String
+  role                Role @default(CUSTOMER)
+  phone               String
+  lat                 String
+  long                String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  }
+
+model RegisterToken {
+  id Int @id @default(autoincrement())
+  token String @unique
+}
+  
+model Outlet {
+  id                  String @id @default(uuid())
+  name                String
+  address             String
+  lat                 String
+  long                String
+}
+
+model Worker {
+  id                  String @id @default(uuid())
+  user_id             String @unique
+  outlet_id           String @unique
+  worker_type         Worker_Type @default(WASHING)
+}
+
+model Order {
+  id                  String @id @default(uuid())
+  customer_id         String @unique
+  outlet_id           String @unique
+  driver_pickup_id    String @unique
+  driver_delivery_id  String @unique
+  status              String
+  total_weight        Int
+  total_price         Int
+  payment_status      Int
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model Order_Item {
+  id                String @id @default(uuid())
+  order_id          String @unique
+  item_name         String @unique
+  qty_initial       Int
+  qty_washing       Int
+  qty_ironing       Int
+  qty_packing       Int
+}
+
+model Bypass_Log {
+  id                String @id @default(uuid())
+  order_id          String @unique
+  outlet_admin_id   String @unique
+  station           String
+  reason            String @db.Text
+  createdAt         DateTime @default(now())
+  timestamp         DateTime @default(now())
+}
+ 

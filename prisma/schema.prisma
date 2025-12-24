@@ -9,84 +9,387 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-  enum Role {
-    CUSTOMER
-    SUPER_ADMIN
-    OUTLET_ADMIN
-    WORKER
-    DRIVER
-  }
+enum Role {
+  CUSTOMER
+  SUPER_ADMIN
+  OUTLET_ADMIN
+  WORKER
+  DRIVER
+}
 
-  enum Worker_Type {
-    WASHING
-    IRONING
-    PACKING
-  }
+enum Staff_Type {
+  OUTLET_ADMIN
+  WORKER
+  DRIVER
+}
 
-model User {
-  id                  String @id @default(uuid())
-  name                String
-  email               String @unique
-  password            String
-  role                Role @default(CUSTOMER)
-  phone               String
-  lat                 String
-  long                String
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  }
+enum Attendance_Status {
+  PRESENT
+  LATE
+  ABSENT
+}
+
+enum Pickup_Request_Status {
+  WAITING_DRIVER
+  DRIVER_ASSIGNED
+  PICKED_UP
+  ARRIVED_OUTLET
+  CANCELLED
+}
+
+enum Order_Status {
+  CREATED
+  WAITING_PAYMENT
+  PAID
+  IN_WASHING
+  IN_IRONING
+  IN_PACKING
+  READY_FOR_DELIVERY
+  ON_DELIVERY
+  DELIVERED
+  COMPLETED
+  CANCELLED
+  ON_HOLD
+}
+
+enum Station_Task_Type {
+  WASHING
+  IRONING
+  PACKING
+}
+
+enum Station_Task_Status {
+  PENDING
+  IN_PROGRESS
+  NEED_BYPASS
+  COMPLETED
+}
+
+enum Bypass_Request_Status {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum Payment_Status {
+  PENDING
+  PAID
+  FAILED
+  EXPIRED
+  REFUNDED
+}
+
+enum Driver_Task_Type {
+  PICKUP
+  DELIVERY
+}
+
+enum Driver_Task_Status {
+  AVAILABLE
+  ACCEPTED
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum Notification_Type {
+  PAYMENT_REMINDER
+  PICKUP_REQUEST
+  DELIVERY_REQUEST
+  BYPASS_REQUEST
+}
+
+enum Complaint_Type {
+  DAMAGE
+  LOST
+  NOT_MATCH
+  REJECTED
+}
+
+enum Complaint_Status {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+  REJECTED
+}
 
 model RegisterToken {
   id Int @id @default(autoincrement())
   token String @unique
 }
-  
-model Outlet {
-  id                  String @id @default(uuid())
-  name                String
-  address             String
-  lat                 String
-  long                String
+
+model User {
+  id String @id @default(uuid())
+
+  name String
+  email String @unique
+  password String
+  role Role @default(CUSTOMER)
+  phone String?
+  lat String
+  long String
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  staff Staff[]
+  attendance Attendance[]
+  customer_address Customer_Address[]
+  pickup_request_customer Pickup_Request[] @relation("customer")
+  pickup_request_driver Pickup_Request[] @relation("driver")
+  order Order[]
+  station_task Station_Task[]
+  bypass_request Bypass_Request[]
+  driver_task Driver_Task[]
+  complaint Complaint[]
 }
 
-model Worker {
-  id                  String @id @default(uuid())
-  user_id             String @unique
-  outlet_id           String @unique
-  worker_type         Worker_Type @default(WASHING)
+model Outlet {
+  id String @id @default(uuid())
+
+  name String
+  address String
+  lat String
+  long String
+  service_radius Int
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  staff Staff[]
+  shift Shift[]
+  attendance Attendance[]
+  pickup_request Pickup_Request[]
+  order Order[]
+}
+
+model Staff {
+  id String @id @default(uuid())
+
+  outlet_id String @unique
+  staff_id String @unique
+  staff_type Staff_Type @default(WORKER)
+
+  created_at DateTime @default(now())
+
+  outlet Outlet @relation(fields: [outlet_id], references: [id])
+  staff User @relation(fields: [staff_id], references: [id])
+}
+
+model Shift {
+  id String @id @default(uuid())
+
+  outlet_id String
+
+  outlet Outlet @relation(fields: [outlet_id], references: [id])
+  name String
+  start_time String
+  end_time String?
+
+  attendance Attendance[]
+}
+
+model Attendance {
+  id String @id @default(uuid())
+
+  staff_id String
+  outlet_id String
+  shift_id String
+  check_in_at DateTime @default(now())
+  check_out_at DateTime?
+  status Attendance_Status @default(PRESENT)
+  notes String?
+
+  staff User @relation(fields: [staff_id], references: [id])
+  outlet Outlet @relation(fields: [outlet_id], references: [id])
+  shift Shift @relation(fields: [shift_id], references: [id])
+}
+
+model Customer_Address {
+  id String @id @default(uuid())
+
+  customer_id String
+  label String
+  address String
+  lat String
+  long String
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  customer User @relation(fields: [customer_id], references: [id])
+
+  pickup_request Pickup_Request[]
+}
+
+model Laundry_Item {
+  id String @id @default(uuid())
+
+  name String
+
+  order_item Order_Item[]
+  station_task_item Station_Task_Item[]
+}
+
+model Pickup_Request {
+  id String @id @default(uuid())
+
+  customer_id String
+  address_id String
+  schedulled_pickup_at DateTime
+  notes String?
+  assigned_outlet_id String
+  assigned_driver_id String?
+  status Pickup_Request_Status @default(WAITING_DRIVER)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  customer User @relation("customer", fields: [customer_id], references: [id])
+  customer_address Customer_Address @relation(fields: [address_id], references: [id])
+  outlet Outlet @relation(fields: [assigned_outlet_id], references: [id])
+  driver User? @relation("driver", fields: [assigned_driver_id], references: [id])
+
+  order Order[]
 }
 
 model Order {
-  id                  String @id @default(uuid())
-  customer_id         String @unique
-  outlet_id           String @unique
-  driver_pickup_id    String @unique
-  driver_delivery_id  String @unique
-  status              String
-  total_weight        Int
-  total_price         Int
-  payment_status      Int
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id String @id @default(uuid())
+
+  pickup_request_id String
+  outlet_id String
+  outlet_admin_id String
+  total_weight Float
+  price_total Float
+  status Order_Status @default(CREATED)
+  paid_at DateTime?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  pickup_request Pickup_Request @relation(fields: [pickup_request_id], references: [id])
+  outlet Outlet @relation(fields: [outlet_id], references: [id])
+  outlet_admin User @relation(fields: [outlet_admin_id], references: [id])
+
+  order_item Order_Item[]
+  station_task Station_Task[]
+  payment Payment[]
+  driver_task Driver_Task[]
+  notification Notification[]
+  complaint Complaint[]
 }
 
 model Order_Item {
-  id                String @id @default(uuid())
-  order_id          String @unique
-  item_name         String @unique
-  qty_initial       Int
-  qty_washing       Int
-  qty_ironing       Int
-  qty_packing       Int
+  id String @id @default(uuid())
+
+  order_id String
+  laundry_item_id String
+
+  order Order @relation(fields: [order_id], references: [id])
+  laundry_item Laundry_Item @relation(fields: [laundry_item_id], references: [id])
+  qty Int
 }
 
-model Bypass_Log {
-  id                String @id @default(uuid())
-  order_id          String @unique
-  outlet_admin_id   String @unique
-  station           String
-  reason            String @db.Text
-  createdAt         DateTime @default(now())
-  timestamp         DateTime @default(now())
+model Station_Task {
+  id String @id @default(uuid())
+
+  order_id String
+  task_type Station_Task_Type @default(WASHING)
+  worker_id String
+  started_at DateTime @default(now())
+  finished_at DateTime?
+  status Station_Task_Status @default(IN_PROGRESS)
+
+  order Order @relation(fields: [order_id], references: [id])
+  worker User @relation(fields: [worker_id], references: [id])
+
+  station_task_item Station_Task_Item[]
+  bypass_request Bypass_Request[]
 }
- 
+
+model Station_Task_Item {
+  id String @id @default(uuid())
+
+  station_task_id String
+  laundry_item_id String
+  qty Int
+
+  station_task Station_Task @relation(fields: [station_task_id], references: [id])
+  laundry_item Laundry_Item @relation(fields: [laundry_item_id], references: [id])
+}
+
+model Bypass_Request {
+  id String @id @default(uuid())
+
+  station_task_id String
+  outlet_admin_id String
+  reason String
+  status Bypass_Request_Status @default(PENDING)
+  approved_at DateTime?
+
+  station_task Station_Task @relation(fields: [station_task_id], references: [id])
+  outlet_admin User @relation(fields: [outlet_admin_id], references: [id])
+}
+
+model Payment {
+  id String @id @default(uuid())
+
+  order_id String
+  method String?
+  amount Float?
+  status Payment_Status @default(PENDING)
+  payment_ref String?
+  paid_at DateTime?
+  payment_img_url String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  order Order @relation(fields: [order_id], references: [id])
+}
+
+model Driver_Task {
+  id String @id @default(uuid())
+
+  order_id String
+  driver_id String
+  task_type Driver_Task_Type
+  status Driver_Task_Status @default(ACCEPTED)
+  started_at DateTime @default(now())
+  finished_at DateTime?
+
+  created_at DateTime @default(now())
+
+  order Order @relation(fields: [order_id], references: [id])
+  driver User @relation(fields: [driver_id], references: [id])
+}
+
+model Notification {
+  id String @id @default(uuid())
+
+  order_id String
+  type Notification_Type
+  title String
+  body String
+  is_read Boolean
+
+  created_at DateTime @default(now())
+
+  order Order @relation(fields: [order_id], references: [id])
+}
+
+model Complaint {
+  id String @id @default(uuid())
+
+  order_id String
+  customer_id String
+  type Complaint_Type
+  description String
+  status Complaint_Status @default(OPEN)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  order Order @relation(fields: [order_id], references: [id])
+  customer User @relation(fields: [customer_id], references: [id])
+}

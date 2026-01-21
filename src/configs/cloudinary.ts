@@ -1,10 +1,10 @@
-import { v2 as cloudinary, UploadApiResponse } from "cloudinary";
-import { Readable } from "stream";
+import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
+import { Readable } from 'stream';
 import {
   CLOUDINARY_API_KEY,
   CLOUDINARY_API_SECRET,
   CLOUDINARY_CLOUD_NAME,
-} from "../configs/env.config";
+} from './env.config';
 
 cloudinary.config({
   api_key: CLOUDINARY_API_KEY,
@@ -21,9 +21,9 @@ function bufferToStream(buffer: Buffer) {
 }
 
 export function extractPublicId(url: string) {
-  const urlParts = url.split("/");
+  const urlParts = url.split('/');
   const publicIdWithExt = urlParts[urlParts.length - 1];
-  const publicId = publicIdWithExt.split(".")[0];
+  const publicId = publicIdWithExt.split('.')[0];
 
   return publicId;
 }
@@ -40,7 +40,7 @@ export function cloudinaryUpload(
       (err, result) => {
         if (err) return reject(err);
 
-        if (!result) return reject(new Error("Upload Failed"));
+        if (!result) return reject(new Error('Upload Failed'));
 
         resolve(result);
       }

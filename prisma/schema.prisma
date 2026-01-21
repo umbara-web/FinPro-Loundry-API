@@ -126,6 +126,8 @@ model User {
   password String
   role Role @default(CUSTOMER)
   phone String?
+  birthDate DateTime?
+  profile_picture_url String?
   lat String
   long String
 
@@ -142,6 +144,10 @@ model User {
   bypass_request Bypass_Request[]
   driver_task Driver_Task[]
   complaint Complaint[]
+  complaint_messages ComplaintMessage[]
+
+  isVerified Boolean @default(false)
+  is_email_verified Boolean @default(false)
 }
 
 model Outlet {
@@ -210,9 +216,15 @@ model Customer_Address {
 
   customer_id String
   label String
+  recipient_name String
+  recipient_phone String
   address String
+  city String
+  postal_code String
+  notes String?
   lat String
   long String
+  is_primary Boolean @default(false)
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -352,16 +364,16 @@ model Driver_Task {
   id String @id @default(uuid())
 
   order_id String
-  driver_id String
+  driver_id String?
   task_type Driver_Task_Type
-  status Driver_Task_Status @default(ACCEPTED)
+  status Driver_Task_Status @default(AVAILABLE) // Changed default to AVAILABLE as per logic
   started_at DateTime @default(now())
   finished_at DateTime?
 
   created_at DateTime @default(now())
 
   order Order @relation(fields: [order_id], references: [id])
-  driver User @relation(fields: [driver_id], references: [id])
+  driver User? @relation(fields: [driver_id], references: [id])
 }
 
 model Notification {
@@ -385,6 +397,7 @@ model Complaint {
   customer_id String
   type Complaint_Type
   description String
+  images String[]
   status Complaint_Status @default(OPEN)
 
   created_at DateTime @default(now())
@@ -392,4 +405,24 @@ model Complaint {
 
   order Order @relation(fields: [order_id], references: [id])
   customer User @relation(fields: [customer_id], references: [id])
+  
+  messages ComplaintMessage[]
+}
+
+model ComplaintMessage {
+  id           String    @id @default(uuid())
+
+  complaint_id String
+  sender_id    String
+  message      String    @db.Text
+  is_read      Boolean   @default(false)
+  
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+
+  complaint    Complaint @relation(fields: [complaint_id], references: [id])
+  sender       User      @relation(fields: [sender_id], references: [id])
+
+  @@index([complaint_id])
+  @@index([sender_id])
 }

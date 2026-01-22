@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { getStationTasks, processTask, requestBypass } from "../controllers/worker.controller";
-import { authMiddleware } from "../middlewares/auth.middleware"; 
+import { authMiddleware } from "../common/middlewares/auth.middleware"; 
 
 export class WorkerRouter {
   private router: Router;

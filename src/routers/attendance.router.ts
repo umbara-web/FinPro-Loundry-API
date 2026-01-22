@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { clockIn, clockOut, getHistory } from "../controllers/attendance.controller";
-import { authMiddleware } from "../middlewares/auth.middleware"; 
+import { authMiddleware } from "../common/middlewares/auth.middleware"; 
 
 export class AttendanceRouter {
   private router: Router;

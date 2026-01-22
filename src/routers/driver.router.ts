@@ -7,7 +7,7 @@ import {
     acceptDelivery, 
     updateDeliveryStatus 
 } from "../controllers/driver.controller";
-import { authMiddleware } from "../middlewares/auth.middleware"; 
+import { authMiddleware } from "../common/middlewares/auth.middleware"; 
 
 export class DriverRouter {
   private router: Router;

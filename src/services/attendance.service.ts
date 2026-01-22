@@ -1,4 +1,4 @@
-import prisma from "../lib/prisma";
+import prisma from "../configs/db";
 
 export const clockInService = async (staff_id: string) => {
   const staff = await prisma.staff.findFirst({

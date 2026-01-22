@@ -5,6 +5,7 @@ import { createCustomError } from "../utils/customError";
 import { SECRET_KEY } from "../configs/env.config";
 
 export interface Token {
+  id: string; // Added id
   email: string;
   firstname: string;
   lastname: string;

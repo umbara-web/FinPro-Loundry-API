@@ -1,4 +1,4 @@
-import prisma from "../lib/prisma";
+import prisma from "../configs/db";
 
 export const getAvailablePickupsService = async (driver_id: string) => {
   const driver = await prisma.staff.findUnique({

@@ -8,7 +8,7 @@ import router from './routes';
 import cookieParser from 'cookie-parser';
 
 import path from 'path';
-// import { initOrderCron } from './modules/order/order.cron';
+import { initOrderCron } from './modules/order/order.cron';
 
 const app = express();
 
@@ -34,8 +34,10 @@ app.use('/api', router);
 // error middleware
 app.use(errorMiddleware);
 
-// initOrderCron();
+initOrderCron();
+
+import { logger } from './lib/logger';
 
 app.listen(PORT, () => {
-  console.log(`Server started on port ${PORT}`);
+  logger.info(`Server started on port ${PORT}`);
 });

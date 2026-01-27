@@ -2,23 +2,12 @@ import { Router } from "express";
 import { getStationTasks, processTask, requestBypass } from "../controllers/worker.controller";
 import { authMiddleware } from "../common/middlewares/auth.middleware"; 
 
-export class WorkerRouter {
-  private router: Router;
+const router = Router();
 
-  constructor() {
-    this.router = Router();
-    this.initializeRoutes();
-  }
+router.use(authMiddleware);
 
-  private initializeRoutes() {
-    this.router.use(authMiddleware);
-    
-    this.router.get("/station/tasks", getStationTasks);
-    this.router.post("/station/tasks/:taskId/process", processTask);
-    this.router.post("/station/tasks/:taskId/bypass", requestBypass);
-  }
+router.get("/station/tasks", getStationTasks);
+router.post("/station/tasks/:taskId/process", processTask);
+router.post("/station/tasks/:taskId/bypass", requestBypass);
 
-  getRouter(): Router {
-    return this.router;
-  }
-}
+export const WorkerRoutes = router;

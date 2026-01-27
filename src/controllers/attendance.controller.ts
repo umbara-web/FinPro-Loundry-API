@@ -1,12 +1,12 @@
 import { Request, Response, NextFunction } from "express";
-import { clockInService, clockOutService, getHistoryService } from "../services/attendance.service";
+import { clockInService, clockOutService, getHistoryService, getStatusService } from "../services/attendance.service";
 
 export const clockIn = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const staff_id = req.user?.id; 
-    if (!staff_id) throw new Error("Unauthorized");
+    const email = req.user?.email; 
+    if (!email) throw new Error("Unauthorized");
 
-    const result = await clockInService(staff_id);
+    const result = await clockInService(email);
     res.status(201).send(result);
   } catch (error: any) {
     if (error.message === "Staff profile not found" || error.message === "No shift assigned to this staff") {
@@ -21,10 +21,10 @@ export const clockIn = async (req: Request, res: Response, next: NextFunction) =
 
 export const clockOut = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const staff_id = req.user?.id;
-    if (!staff_id) throw new Error("Unauthorized");
+    const email = req.user?.email;
+    if (!email) throw new Error("Unauthorized");
 
-    const result = await clockOutService(staff_id);
+    const result = await clockOutService(email);
     res.status(200).send(result);
   } catch (error: any) {
     if (error.message === "No active check-in found for today") {
@@ -37,11 +37,23 @@ export const clockOut = async (req: Request, res: Response, next: NextFunction) 
 
 export const getHistory = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const staff_id = req.user?.id;
-    if (!staff_id) throw new Error("Unauthorized");
+    const email = req.user?.email;
+    if (!email) throw new Error("Unauthorized");
 
-    const history = await getHistoryService(staff_id);
+    const history = await getHistoryService(email);
     res.status(200).send({ data: history });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getStatus = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const email = req.user?.email;
+    if (!email) throw new Error("Unauthorized");
+
+    const status = await getStatusService(email);
+    res.status(200).send({ data: status });
   } catch (error) {
     next(error);
   }

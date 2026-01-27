@@ -9,29 +9,16 @@ import {
 } from "../controllers/driver.controller";
 import { authMiddleware } from "../common/middlewares/auth.middleware"; 
 
-export class DriverRouter {
-  private router: Router;
+const router = Router();
 
-  constructor() {
-    this.router = Router();
-    this.initializeRoutes();
-  }
+router.use(authMiddleware);
 
-  private initializeRoutes() {
-    this.router.use(authMiddleware);
-    
-    // Pickups
-    this.router.get("/pickups", getAvailablePickups);
-    this.router.post("/pickups/:requestId/accept", acceptPickup);
-    this.router.patch("/pickups/:requestId/status", updatePickupStatus);
+router.get("/pickups", getAvailablePickups);
+router.post("/pickups/:requestId/accept", acceptPickup);
+router.patch("/pickups/:requestId/status", updatePickupStatus);
 
-    // Deliveries
-    this.router.get("/deliveries", getAvailableDeliveries);
-    this.router.post("/deliveries/:orderId/accept", acceptDelivery);
-    this.router.patch("/deliveries/:taskId/status", updateDeliveryStatus);
-  }
+router.get("/deliveries", getAvailableDeliveries);
+router.post("/deliveries/:orderId/accept", acceptDelivery);
+router.patch("/deliveries/:taskId/status", updateDeliveryStatus);
 
-  getRouter(): Router {
-    return this.router;
-  }
-}
+export const DriverRoutes = router;

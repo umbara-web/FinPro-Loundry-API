@@ -7,6 +7,7 @@ import { OrderRoutes } from './modules/order/order.routes';
 import paymentRouter from './modules/payment/payment.routes';
 import { ComplaintRoutes } from './modules/complaint/complaint.routes';
 import { AttendanceRoutes } from './routers/attendance.router';
+import { WorkerRoutes } from './routers/worker.router';
 
 const router = Router();
 
@@ -19,5 +20,6 @@ router.use('/orders', OrderRoutes);
 router.use('/payments', paymentRouter);
 router.use('/complaints', ComplaintRoutes);
 router.use('/attendance', AttendanceRoutes);
+router.use('/worker', WorkerRoutes);
 
 export default router;

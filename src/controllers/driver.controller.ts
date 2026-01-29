@@ -10,7 +10,7 @@ import {
 
 export const getAvailablePickups = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const driver_id = req.user?.id;
+    const driver_id = req.user?.userId;
     if (!driver_id) throw new Error("Unauthorized");
     
     const result = await getAvailablePickupsService(driver_id);
@@ -22,7 +22,7 @@ export const getAvailablePickups = async (req: Request, res: Response, next: Nex
 
 export const acceptPickup = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const driver_id = req.user?.id;
+    const driver_id = req.user?.userId;
     if (!driver_id) throw new Error("Unauthorized");
     const { requestId } = req.params;
 
@@ -47,7 +47,7 @@ export const updatePickupStatus = async (req: Request, res: Response, next: Next
 
 export const getAvailableDeliveries = async (req: Request, res: Response, next: NextFunction) => {
   try {
-      const driver_id = req.user?.id;
+      const driver_id = req.user?.userId;
       if (!driver_id) throw new Error("Unauthorized");
 
       const result = await getAvailableDeliveriesService(driver_id);
@@ -59,7 +59,7 @@ export const getAvailableDeliveries = async (req: Request, res: Response, next: 
 
 export const acceptDelivery = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const driver_id = req.user?.id;
+        const driver_id = req.user?.userId;
         if (!driver_id) throw new Error("Unauthorized");
         const { orderId } = req.params;
 

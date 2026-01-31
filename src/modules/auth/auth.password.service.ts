@@ -36,7 +36,7 @@ export async function requestResetPassword(data: { email: string }) {
   const token = generateToken({ userId: user.id }, '1h');
   await prisma.registerToken.create({ data: { token } });
 
-  const resetLink = `${BASE_WEB_URL}/reset-password/confirm/${token}`;
+  const resetLink = `${BASE_WEB_URL}/auth/reset-password/confirm/${token}`;
   await sendResetPasswordEmail(user.email, user.name, resetLink);
 
   return { message: 'Reset password email sent' };

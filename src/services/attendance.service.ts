@@ -1,4 +1,4 @@
-import prisma from "../configs/db";
+import prisma from '../configs/db';
 
 export const clockInService = async (staff_id: string) => {
   const staff = await prisma.staff.findFirst({
@@ -24,9 +24,9 @@ export const clockInService = async (staff_id: string) => {
   });
 
   if (existingAttendance) {
-    throw new Error("Already clocked in today");
+    throw new Error('Already clocked in today');
   }
-
+  
   const currentShift = staff.shift; 
 
   await prisma.attendance.create({
@@ -34,11 +34,11 @@ export const clockInService = async (staff_id: string) => {
       staff_id,
       outlet_id: staff.outlet_id,
       shift_id: currentShift.id,
-      status: "PRESENT",
+      status: 'PRESENT',
     },
   });
 
-  return { message: "Clock in successful" };
+  return { message: 'Clock in successful' };
 };
 
 export const clockOutService = async (staff_id: string) => {
@@ -49,20 +49,20 @@ export const clockOutService = async (staff_id: string) => {
     where: {
       staff_id,
       check_in_at: { gte: today },
-      check_out_at: null
-    }
+      check_out_at: null,
+    },
   });
 
   if (!attendance) {
-    throw new Error("No active check-in found for today");
+    throw new Error('No active check-in found for today');
   }
 
   await prisma.attendance.update({
     where: { id: attendance.id },
-    data: { check_out_at: new Date() }
+    data: { check_out_at: new Date() },
   });
 
-  return { message: "Clock out successful" };
+  return { message: 'Clock out successful' };
 };
 
 export const getHistoryService = async (staff_id: string) => {
@@ -108,7 +108,8 @@ export const getStatusService = async (staff_id: string) => {
   let weeklyHours = 0;
   for (const record of weeklyAttendance) {
     if (record.check_out_at && record.check_in_at) {
-      const duration = record.check_out_at.getTime() - record.check_in_at.getTime();
+      const duration =
+        record.check_out_at.getTime() - record.check_in_at.getTime();
       weeklyHours += duration / (1000 * 60 * 60);
     }
   }
@@ -123,7 +124,7 @@ export const getStatusService = async (staff_id: string) => {
     checkOutTime,
     weeklyHours: Math.round(weeklyHours * 10) / 10,
     overtime: Math.max(0, Math.round((weeklyHours - 40) * 10) / 10),
-    station: staff?.outlet?.name || "Unknown",
+    station: staff?.outlet?.name || 'Unknown',
     staffName: staff_id,
     lastShiftEnd: checkOutTime,
   };

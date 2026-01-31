@@ -6,7 +6,6 @@ import { PORT, BASE_WEB_URL } from './configs/env.config';
 import errorMiddleware from './common/middlewares/error.middleware';
 import router from './routes';
 import cookieParser from 'cookie-parser';
-
 import path from 'path';
 import { initOrderCron } from './modules/order/order.cron';
 
@@ -34,6 +33,7 @@ app.use('/api', router);
 // error middleware
 app.use(errorMiddleware);
 
+// start cron jobs
 initOrderCron();
 
 import { logger } from './lib/logger';

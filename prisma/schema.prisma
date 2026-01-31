@@ -172,7 +172,7 @@ model Outlet {
 model Staff {
   id String @id @default(uuid())
 
-  outlet_id String @unique
+  outlet_id String
   staff_id String @unique
   staff_type Staff_Type @default(WORKER)
 

@@ -14,7 +14,6 @@ router.use('/auth', authRouter);
 router.use('/pickup', pickupRouter);
 router.use('/users/addresses', addressRouter);
 router.use('/users', userRouter);
-router.use('/users', userRouter);
 router.use('/orders', OrderRoutes);
 router.use('/payments', paymentRouter);
 router.use('/complaints', ComplaintRoutes);

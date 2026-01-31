@@ -6,9 +6,9 @@ export const clockInService = async (staff_id: string) => {
     include: { shift: true, outlet: true },
   });
 
-  if (!staff) throw new Error('Staff profile not found');
-  if (!staff.shift || staff.shift.length === 0) {
-    throw new Error('No shift assigned to this staff');
+  if (!staff) throw new Error("Staff profile not found");
+  if (!staff.shift) {
+    throw new Error("No shift assigned to this staff");
   }
 
   const today = new Date();
@@ -26,8 +26,8 @@ export const clockInService = async (staff_id: string) => {
   if (existingAttendance) {
     throw new Error('Already clocked in today');
   }
-
-  const currentShift = staff.shift[0];
+  
+  const currentShift = staff.shift; 
 
   await prisma.attendance.create({
     data: {
@@ -70,6 +70,7 @@ export const getHistoryService = async (staff_id: string) => {
     where: { staff_id },
     orderBy: { check_in_at: 'desc' },
     take: 30,
+    include: { outlet: true }
   });
 };
 

@@ -175,11 +175,13 @@ model Staff {
   outlet_id String
   staff_id String @unique
   staff_type Staff_Type @default(WORKER)
+  shift_id String?
 
   created_at DateTime @default(now())
 
   outlet Outlet @relation(fields: [outlet_id], references: [id])
   staff User @relation(fields: [staff_id], references: [id])
+  shift Shift? @relation(fields: [shift_id], references: [id])
 }
 
 model Shift {
@@ -193,6 +195,7 @@ model Shift {
   end_time String?
 
   attendance Attendance[]
+  staff Staff[]
 }
 
 model Attendance {

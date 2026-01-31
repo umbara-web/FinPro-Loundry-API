@@ -3,7 +3,7 @@ import { getStationTasksService, processTaskService, requestBypassService } from
 
 export const getStationTasks = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const worker_id = req.user?.id;
+    const worker_id = req.user?.userId;
     if (!worker_id) throw new Error("Unauthorized");
 
     const tasks = await getStationTasksService(worker_id);
@@ -17,7 +17,7 @@ export const processTask = async (req: Request, res: Response, next: NextFunctio
   try {
     const { taskId } = req.params;
     const { items } = req.body;
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     if (!userId) throw new Error("Unauthorized");
 
     const result = await processTaskService(taskId, items, userId);

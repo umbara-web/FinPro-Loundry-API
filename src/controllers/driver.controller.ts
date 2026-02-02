@@ -5,7 +5,11 @@ import {
     updatePickupStatusService, 
     getAvailableDeliveriesService, 
     acceptDeliveryService, 
-    updateDeliveryStatusService 
+    updateDeliveryStatusService,
+    getActiveJobService,
+    getDriverHistoryService,
+    getPickupByIdService,
+    getDeliveryByIdService
 } from "../services/driver.service";
 
 export const getAvailablePickups = async (req: Request, res: Response, next: NextFunction) => {
@@ -77,6 +81,59 @@ export const updateDeliveryStatus = async (req: Request, res: Response, next: Ne
 
         const result = await updateDeliveryStatusService(taskId, status);
         res.status(200).send(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getActiveJob = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const driver_id = req.user?.userId;
+        if (!driver_id) throw new Error("Unauthorized");
+
+        const result = await getActiveJobService(driver_id);
+        res.status(200).send({ data: result });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getDriverHistory = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const driver_id = req.user?.userId;
+        if (!driver_id) throw new Error("Unauthorized");
+        
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 10;
+
+        const result = await getDriverHistoryService(driver_id, page, limit);
+        res.status(200).send(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getPickupById = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const driver_id = req.user?.userId;
+        if (!driver_id) throw new Error("Unauthorized");
+        const { pickupId } = req.params;
+
+        const result = await getPickupByIdService(driver_id, pickupId);
+        res.status(200).send({ data: result });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getDeliveryById = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const driver_id = req.user?.userId;
+        if (!driver_id) throw new Error("Unauthorized");
+        const { taskId } = req.params;
+
+        const result = await getDeliveryByIdService(driver_id, taskId);
+        res.status(200).send({ data: result });
     } catch (error) {
         next(error);
     }

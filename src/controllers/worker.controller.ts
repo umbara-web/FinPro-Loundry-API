@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { getStationTasksService, processTaskService, requestBypassService } from "../services/worker.service";
+import { getStationTasksService, processTaskService, requestBypassService, getWorkerHistoryService } from "../services/worker.service";
 
 export const getStationTasks = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -35,9 +35,26 @@ export const processTask = async (req: Request, res: Response, next: NextFunctio
 export const requestBypass = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { taskId } = req.params;
-    const { reason, outletAdminId } = req.body;
+    const { reason } = req.body;
+    const userId = req.user?.userId;
+    if (!userId) throw new Error("Unauthorized");
 
-    const result = await requestBypassService(taskId, reason, outletAdminId);
+    const result = await requestBypassService(taskId, reason, userId);
+    res.status(200).send(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getWorkerHistory = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const workerId = req.user?.userId;
+    if (!workerId) throw new Error("Unauthorized");
+
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+
+    const result = await getWorkerHistoryService(workerId, page, limit);
     res.status(200).send(result);
   } catch (error) {
     next(error);

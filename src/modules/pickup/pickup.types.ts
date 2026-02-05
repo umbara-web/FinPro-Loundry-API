@@ -4,6 +4,8 @@ export interface CreatePickupInput {
   scheduledPickupAt: Date;
   notes?: string;
   outletId?: string;
+  items?: { laundryItemId: string; qty: number }[];
+  manualItems?: { name: string; quantity: number }[];
 }
 
 export interface OutletWithRadius {

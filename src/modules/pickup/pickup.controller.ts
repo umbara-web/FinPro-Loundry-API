@@ -36,13 +36,22 @@ export async function createPickup(
     const customerId = req.user?.userId;
     if (!customerId) return res.status(401).json({ error: 'Unauthorized' });
 
-    const { addressId, schedulledPickupAt, notes, outletId } = req.body;
+    const {
+      addressId,
+      schedulledPickupAt,
+      notes,
+      outletId,
+      items,
+      manualItems,
+    } = req.body;
     const result = await createPickupRequest({
       customerId,
       addressId,
       scheduledPickupAt: new Date(schedulledPickupAt),
       notes,
       outletId,
+      items,
+      manualItems,
     });
 
     res

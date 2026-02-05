@@ -1,13 +1,27 @@
 import { Request, Response, NextFunction } from "express";
-import { getStationTasksService, processTaskService, requestBypassService, getWorkerHistoryService } from "../services/worker.service";
+import { getStationTasksService, processTaskService, requestBypassService, getWorkerHistoryService, claimTaskService } from "../services/worker.service";
 
 export const getStationTasks = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const worker_id = req.user?.userId;
     if (!worker_id) throw new Error("Unauthorized");
 
-    const tasks = await getStationTasksService(worker_id);
+    const stationType = req.query.station as string || 'WASHING';
+    const tasks = await getStationTasksService(worker_id, stationType);
     res.status(200).send({ data: tasks });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const claimTask = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { taskId } = req.params;
+    const workerId = req.user?.userId;
+    if (!workerId) throw new Error("Unauthorized");
+
+    const result = await claimTaskService(taskId, workerId);
+    res.status(200).send(result);
   } catch (error) {
     next(error);
   }

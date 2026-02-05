@@ -471,6 +471,146 @@ async function main() {
     });
   }
 
+  // ================================
+  // 16. SEED ADDITIONAL TEST TASKS (FOR WORKER DASHBOARD TESTING)
+  // ================================
+  console.log('🧪 Seeding additional test tasks for Jakarta Timur...');
+
+  const jakartaTimurOutlet = outlets[2]; // Jakarta Timur
+  const jakartaTimurAdmin = outletAdmins[2];
+  const jakartaTimurWorkers = workers.slice(6, 9); // Workers 7, 8, 9 (indices 6, 7, 8)
+  const jakartaTimurDriver = drivers[4]; // Driver 5
+
+  const testTaskConfigs = [
+    // 3 orders in WASHING stage
+    { status: Order_Status.IN_WASHING, taskType: Station_Task_Type.WASHING },
+    { status: Order_Status.IN_WASHING, taskType: Station_Task_Type.WASHING },
+    { status: Order_Status.IN_WASHING, taskType: Station_Task_Type.WASHING },
+    // 3 orders in IRONING stage
+    { status: Order_Status.IN_IRONING, taskType: Station_Task_Type.IRONING },
+    { status: Order_Status.IN_IRONING, taskType: Station_Task_Type.IRONING },
+    { status: Order_Status.IN_IRONING, taskType: Station_Task_Type.IRONING },
+    // 3 orders in PACKING stage
+    { status: Order_Status.IN_PACKING, taskType: Station_Task_Type.PACKING },
+    { status: Order_Status.IN_PACKING, taskType: Station_Task_Type.PACKING },
+    { status: Order_Status.IN_PACKING, taskType: Station_Task_Type.PACKING },
+  ];
+
+  for (let i = 0; i < testTaskConfigs.length; i++) {
+    const config = testTaskConfigs[i];
+    const customer = customers[i % customers.length];
+    const address = customerAddresses[i % customerAddresses.length];
+    const weight = Math.round((2 + Math.random() * 8) * 10) / 10;
+    const pricePerKg = 7000;
+
+    // Create pickup request
+    const testPickupRequest = await prisma.pickup_Request.create({
+      data: {
+        customer_id: customer.id,
+        address_id: address.id,
+        schedulled_pickup_at: new Date(),
+        notes: `Test pickup #${i + 1} for worker dashboard`,
+        assigned_outlet_id: jakartaTimurOutlet.id,
+        assigned_driver_id: jakartaTimurDriver.id,
+        status: Pickup_Request_Status.ARRIVED_OUTLET,
+      },
+    });
+
+    // Create order
+    const testOrder = await prisma.order.create({
+      data: {
+        pickup_request_id: testPickupRequest.id,
+        outlet_id: jakartaTimurOutlet.id,
+        outlet_admin_id: jakartaTimurAdmin.id,
+        total_weight: weight,
+        price_total: weight * pricePerKg,
+        status: config.status,
+        paid_at: new Date(),
+      },
+    });
+
+    // Create order items (2-4 random items)
+    const numItems = 2 + Math.floor(Math.random() * 3);
+    const usedItems = new Set<string>();
+    for (let j = 0; j < numItems; j++) {
+      let item;
+      do {
+        item = randomItem(laundryItems);
+      } while (usedItems.has(item.id));
+      usedItems.add(item.id);
+
+      await prisma.order_Item.create({
+        data: {
+          order_id: testOrder.id,
+          laundry_item_id: item.id,
+          qty: 1 + Math.floor(Math.random() * 5),
+        },
+      });
+    }
+
+    // Create payment
+    await prisma.payment.create({
+      data: {
+        order_id: testOrder.id,
+        method: 'bank_transfer',
+        amount: testOrder.price_total,
+        status: Payment_Status.PAID,
+        payment_ref: `PAY-TEST-${Date.now()}-${i}`,
+        paid_at: new Date(),
+      },
+    });
+
+    // Create completed prior tasks if needed
+    const assignedWorker = randomItem(jakartaTimurWorkers);
+
+    if (config.status === Order_Status.IN_IRONING || config.status === Order_Status.IN_PACKING) {
+      await prisma.station_Task.create({
+        data: {
+          order_id: testOrder.id,
+          task_type: Station_Task_Type.WASHING,
+          worker_id: randomItem(jakartaTimurWorkers).id,
+          status: Station_Task_Status.COMPLETED,
+          finished_at: new Date(),
+        },
+      });
+    }
+
+    if (config.status === Order_Status.IN_PACKING) {
+      await prisma.station_Task.create({
+        data: {
+          order_id: testOrder.id,
+          task_type: Station_Task_Type.IRONING,
+          worker_id: randomItem(jakartaTimurWorkers).id,
+          status: Station_Task_Status.COMPLETED,
+          finished_at: new Date(),
+        },
+      });
+    }
+
+    // Create the active IN_PROGRESS task
+    const activeTestTask = await prisma.station_Task.create({
+      data: {
+        order_id: testOrder.id,
+        task_type: config.taskType,
+        worker_id: assignedWorker.id,
+        status: Station_Task_Status.IN_PROGRESS,
+        finished_at: null,
+      },
+    });
+
+    // Create station task items
+    const testOrderItems = await prisma.order_Item.findMany({ where: { order_id: testOrder.id } });
+    for (const item of testOrderItems) {
+      await prisma.station_Task_Item.create({
+        data: {
+          station_task_id: activeTestTask.id,
+          laundry_item_id: item.laundry_item_id,
+          qty: item.qty,
+        },
+      });
+    }
+  }
+
   console.log('✅ Database seeding completed!');
   console.log(`
 📊 Seeding Summary:

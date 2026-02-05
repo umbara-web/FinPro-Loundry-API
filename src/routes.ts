@@ -9,6 +9,7 @@ import { ComplaintRoutes } from './modules/complaint/complaint.routes';
 import { AttendanceRoutes } from './routers/attendance.router';
 import { WorkerRoutes } from './routers/worker.router';
 import { DriverRoutes } from './routers/driver.router';
+import { MasterRoutes } from './routers/master.router';
 
 const router = Router();
 
@@ -22,6 +23,7 @@ router.use('/complaints', ComplaintRoutes);
 router.use('/attendance', AttendanceRoutes);
 router.use('/worker', WorkerRoutes);
 router.use('/driver', DriverRoutes);
+router.use('/master', MasterRoutes);
 
 export default router;
 

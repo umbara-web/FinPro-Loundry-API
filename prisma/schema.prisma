@@ -310,13 +310,13 @@ model Station_Task {
 
   order_id String
   task_type Station_Task_Type @default(WASHING)
-  worker_id String
+  worker_id String?
   started_at DateTime @default(now())
   finished_at DateTime?
-  status Station_Task_Status @default(IN_PROGRESS)
+  status Station_Task_Status @default(PENDING)
 
   order Order @relation(fields: [order_id], references: [id])
-  worker User @relation(fields: [worker_id], references: [id])
+  worker User? @relation(fields: [worker_id], references: [id])
 
   station_task_item Station_Task_Item[]
   bypass_request Bypass_Request[]

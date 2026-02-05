@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getStationTasks, processTask, requestBypass, getWorkerHistory } from "../controllers/worker.controller";
+import { getStationTasks, claimTask, processTask, requestBypass, getWorkerHistory } from "../controllers/worker.controller";
 import { authMiddleware } from "../common/middlewares/auth.middleware"; 
 
 const router = Router();
@@ -7,6 +7,7 @@ const router = Router();
 router.use(authMiddleware);
 
 router.get("/station/tasks", getStationTasks);
+router.post("/station/tasks/:taskId/claim", claimTask);
 router.post("/station/tasks/:taskId/process", processTask);
 router.post("/station/tasks/:taskId/bypass", requestBypass);
 router.get("/history", getWorkerHistory);

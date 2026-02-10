@@ -1,0 +1,18 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_routers_1 = __importDefault(require("./auth.routers"));
+const attendance_router_1 = require("./attendance.router");
+const driver_router_1 = require("./driver.router");
+const worker_router_1 = require("./worker.router");
+const master_router_1 = require("./master.router");
+const router = (0, express_1.Router)();
+router.use('/auth', auth_routers_1.default);
+router.use('/attendance', attendance_router_1.AttendanceRoutes);
+router.use('/driver', driver_router_1.DriverRoutes);
+router.use('/worker', worker_router_1.WorkerRoutes);
+router.use('/master', master_router_1.MasterRoutes);
+exports.default = router;

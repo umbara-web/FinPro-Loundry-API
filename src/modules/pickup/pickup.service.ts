@@ -122,6 +122,7 @@ async function fetchPickupRequest(id: string) {
               laundry_item: true,
             },
           },
+          payment: true,
         },
       },
     },

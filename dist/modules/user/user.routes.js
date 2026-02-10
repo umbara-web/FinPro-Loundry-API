@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const user_controller_1 = require("./user.controller");
+const auth_middleware_1 = require("../../common/middlewares/auth.middleware");
+const uploader_1 = require("../../common/utils/uploader");
+const userRouter = (0, express_1.Router)();
+const userController = new user_controller_1.UserController();
+userRouter.patch('/avatar', auth_middleware_1.authMiddleware, uploader_1.uploader.single('avatar'), userController.updateAvatar);
+userRouter.patch('/profile', auth_middleware_1.authMiddleware, userController.updateProfile);
+userRouter.patch('/password', auth_middleware_1.authMiddleware, userController.changePassword);
+exports.default = userRouter;

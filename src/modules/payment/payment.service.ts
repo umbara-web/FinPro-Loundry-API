@@ -121,7 +121,7 @@ export class PaymentService {
       paymentId: payment.id,
       amount: amount,
       snapToken: 'SIMULATED-SNAP-TOKEN-' + payment.id,
-      redirectUrl: `/customer/orders/${orderId}/payment/success`,
+      redirectUrl: `/dashboard/orders/${order.pickup_request.id}/payment/success`,
     };
   }
 

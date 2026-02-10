@@ -1,0 +1,13 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.AttendanceRoutes = void 0;
+const express_1 = require("express");
+const attendance_controller_1 = require("../controllers/attendance.controller");
+const auth_middleware_1 = require("../common/middlewares/auth.middleware");
+const router = (0, express_1.Router)();
+router.use(auth_middleware_1.authMiddleware);
+router.post('/clock-in', attendance_controller_1.clockIn);
+router.post('/clock-out', attendance_controller_1.clockOut);
+router.get('/history', attendance_controller_1.getHistory);
+router.get('/status', attendance_controller_1.getStatus);
+exports.AttendanceRoutes = router;

@@ -1,4 +1,5 @@
 import prisma from "../configs/db";
+import { Station_Task_Type } from "@prisma/client";
 
 // Get tasks: both pool (unassigned) and mine (assigned to me)
 export const getStationTasksService = async (workerId: string, stationType: string) => {
@@ -28,8 +29,8 @@ export const getStationTasksService = async (workerId: string, stationType: stri
     // Pool tasks: unassigned tasks for this outlet's orders
     const poolTasks = await prisma.station_Task.findMany({
       where: {
-        worker_id: null as any,
-        task_type: stationType as any,
+        worker_id: null,
+        task_type: stationType as Station_Task_Type,
         status: "PENDING",
         order: { outlet_id: worker.outlet_id }
       },
@@ -41,7 +42,7 @@ export const getStationTasksService = async (workerId: string, stationType: stri
     const myTasks = await prisma.station_Task.findMany({
       where: {
         worker_id: workerId,
-        task_type: stationType as any,
+        task_type: stationType as Station_Task_Type,
         status: { in: ['IN_PROGRESS', 'NEED_BYPASS'] }
       },
       include: includeRelations,

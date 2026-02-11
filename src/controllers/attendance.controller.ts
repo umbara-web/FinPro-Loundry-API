@@ -12,10 +12,10 @@ export const clockIn = async (
   next: NextFunction
 ) => {
   try {
-    const email = req.user?.email;
-    if (!email) throw new Error('Unauthorized');
+    const userId = req.user?.userId;
+    if (!userId) throw new Error('Unauthorized');
 
-    const result = await clockInService(email);
+    const result = await clockInService(userId);
     res.status(201).send(result);
   } catch (error: any) {
     if (
@@ -37,10 +37,10 @@ export const clockOut = async (
   next: NextFunction
 ) => {
   try {
-    const email = req.user?.email;
-    if (!email) throw new Error('Unauthorized');
+    const userId = req.user?.userId;
+    if (!userId) throw new Error('Unauthorized');
 
-    const result = await clockOutService(email);
+    const result = await clockOutService(userId);
     res.status(200).send(result);
   } catch (error: any) {
     if (error.message === 'No active check-in found for today') {
@@ -57,10 +57,10 @@ export const getHistory = async (
   next: NextFunction
 ) => {
   try {
-    const email = req.user?.email;
-    if (!email) throw new Error('Unauthorized');
+    const userId = req.user?.userId;
+    if (!userId) throw new Error('Unauthorized');
 
-    const history = await getHistoryService(email);
+    const history = await getHistoryService(userId);
     res.status(200).send({ data: history });
   } catch (error) {
     next(error);
@@ -73,10 +73,10 @@ export const getStatus = async (
   next: NextFunction
 ) => {
   try {
-    const email = req.user?.email;
-    if (!email) throw new Error('Unauthorized');
+    const userId = req.user?.userId;
+    if (!userId) throw new Error('Unauthorized');
 
-    const status = await getStatusService(email);
+    const status = await getStatusService(userId);
     res.status(200).send({ data: status });
   } catch (error) {
     next(error);

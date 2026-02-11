@@ -88,15 +88,25 @@ export const getActiveJobService = async (driver_id: string) => {
 };
 
 // Get driver's job history
-export const getDriverHistoryService = async (driver_id: string, page: number = 1, limit: number = 10) => {
+export const getDriverHistoryService = async (driver_id: string, page: number = 1, limit: number = 10, date?: string) => {
   try {
     const skip = (page - 1) * limit;
+
+    // Build date filter if date=today
+    let dateFilter: { gte: Date; lt: Date } | undefined;
+    if (date === 'today') {
+      const now = new Date();
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      dateFilter = { gte: startOfDay, lt: endOfDay };
+    }
 
     // Get completed pickups
     const completedPickups = await prisma.pickup_Request.findMany({
       where: {
         assigned_driver_id: driver_id,
-        status: "ARRIVED_OUTLET"
+        status: "ARRIVED_OUTLET",
+        ...(dateFilter ? { updated_at: dateFilter } : {})
       },
       include: {
         customer: { select: { name: true } },
@@ -110,7 +120,8 @@ export const getDriverHistoryService = async (driver_id: string, page: number = 
     const completedDeliveries = await prisma.driver_Task.findMany({
       where: {
         driver_id: driver_id,
-        status: "DONE"
+        status: "DONE",
+        ...(dateFilter ? { finished_at: dateFilter } : {})
       },
       include: {
         order: {
@@ -144,7 +155,7 @@ export const getDriverHistoryService = async (driver_id: string, page: number = 
         order_number: `ORD-${d.order_id.slice(-4).toUpperCase()}`,
         customer_name: d.order?.pickup_request?.customer?.name || "N/A",
         address: d.order?.pickup_request?.customer_address?.address || "N/A",
-        completed_at: d.finished_at,
+        completed_at: d.finished_at || d.order.updated_at,
         status: "SELESAI"
       }))
     ].sort((a, b) => new Date(b.completed_at!).getTime() - new Date(a.completed_at!).getTime());
@@ -191,17 +202,26 @@ export const getAvailablePickupsService = async (driver_id: string) => {
   }
 };
 
-// Get single pickup by ID (for driver assigned to it)
+// Get single pickup by ID (for driver assigned to it, or available pickups)
 export const getPickupByIdService = async (driver_id: string, pickupId: string) => {
   try {
+    // Get driver's outlet
+    const driver = await prisma.staff.findUnique({
+      where: { staff_id: driver_id },
+    });
+
     const pickup = await prisma.pickup_Request.findFirst({
       where: {
         id: pickupId,
-        assigned_driver_id: driver_id
+        OR: [
+          { assigned_driver_id: driver_id },
+          { status: "WAITING_DRIVER", assigned_outlet_id: driver?.outlet_id },
+        ],
       },
       include: {
         customer: { select: { name: true, phone: true } },
-        customer_address: true
+        customer_address: true,
+        outlet: true
       }
     });
 
@@ -315,7 +335,8 @@ export const getDeliveryByIdService = async (driver_id: string, taskId: string) 
             pickup_request: {
               include: {
                 customer: { select: { name: true, phone: true } },
-                customer_address: true
+                customer_address: true,
+                outlet: { select: { name: true, address: true, lat: true, long: true } }
               }
             }
           }

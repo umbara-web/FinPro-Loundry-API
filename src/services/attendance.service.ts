@@ -140,6 +140,9 @@ export const getStatusService = async (staff_id: string) => {
       station: staff?.outlet?.name || 'Unknown',
       staffName: staff_id,
       lastShiftEnd: checkOutTime,
+      shiftName: staff?.shift?.name || 'No Shift Assigned',
+      shiftStart: staff?.shift?.start_time || '--:--',
+      shiftEnd: staff?.shift?.end_time || '--:--',
     };
   } catch (error) {
     throw error;

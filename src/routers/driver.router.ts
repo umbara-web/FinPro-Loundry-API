@@ -1,17 +1,17 @@
 import { Router } from "express";
-import { 
-    getAvailablePickups, 
-    acceptPickup, 
-    updatePickupStatus, 
-    getAvailableDeliveries, 
-    acceptDelivery, 
-    updateDeliveryStatus,
-    getActiveJob,
-    getDriverHistory,
-    getPickupById,
-    getDeliveryById
+import {
+  getAvailablePickups,
+  acceptPickup,
+  updatePickupStatus,
+  getAvailableDeliveries,
+  acceptDelivery,
+  updateDeliveryStatus,
+  getActiveJob,
+  getDriverHistory,
+  getPickupById,
+  getDeliveryById,
 } from "../controllers/driver.controller";
-import { authMiddleware } from "../common/middlewares/auth.middleware"; 
+import { authMiddleware } from "../common/middlewares/auth.middleware";
 
 const router = Router();
 
@@ -34,4 +34,3 @@ router.post("/deliveries/:orderId/accept", acceptDelivery);
 router.patch("/deliveries/:taskId/status", updateDeliveryStatus);
 
 export const DriverRoutes = router;
-

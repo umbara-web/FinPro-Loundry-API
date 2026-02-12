@@ -1,10 +1,11 @@
 import prisma from "../configs/db";
 import { Station_Task_Type } from "@prisma/client";
 
-// Get tasks: both pool (unassigned) and mine (assigned to me)
-export const getStationTasksService = async (workerId: string, stationType: string) => {
+export const getStationTasksService = async (
+  workerId: string,
+  stationType: string,
+) => {
   try {
-    // Get worker's outlet first
     const worker = await prisma.staff.findUnique({
       where: { staff_id: workerId },
     });
@@ -17,36 +18,34 @@ export const getStationTasksService = async (workerId: string, stationType: stri
           order_item: { include: { laundry_item: true } },
           pickup_request: {
             include: {
-              customer: { select: { name: true, profile_picture_url: true } }
-            }
-          }
-        }
+              customer: { select: { name: true, profile_picture_url: true } },
+            },
+          },
+        },
       },
       station_task_item: { include: { laundry_item: true } },
-      bypass_request: true
+      bypass_request: true,
     };
 
-    // Pool tasks: unassigned tasks for this outlet's orders
     const poolTasks = await prisma.station_Task.findMany({
       where: {
         worker_id: null,
         task_type: stationType as Station_Task_Type,
         status: "PENDING",
-        order: { outlet_id: worker.outlet_id }
+        order: { outlet_id: worker.outlet_id },
       },
       include: includeRelations,
-      orderBy: { started_at: 'asc' }
+      orderBy: { started_at: "asc" },
     });
 
-    // My tasks: assigned to me
     const myTasks = await prisma.station_Task.findMany({
       where: {
         worker_id: workerId,
         task_type: stationType as Station_Task_Type,
-        status: { in: ['IN_PROGRESS', 'NEED_BYPASS'] }
+        status: { in: ["IN_PROGRESS", "NEED_BYPASS"] },
       },
       include: includeRelations,
-      orderBy: { started_at: 'asc' }
+      orderBy: { started_at: "asc" },
     });
 
     return { pool: poolTasks, mine: myTasks };
@@ -55,26 +54,25 @@ export const getStationTasksService = async (workerId: string, stationType: stri
   }
 };
 
-// Claim a task from the pool
 export const claimTaskService = async (taskId: string, workerId: string) => {
   try {
-    // Verify task exists and is available
     const task = await prisma.station_Task.findUnique({
-      where: { id: taskId }
+      where: { id: taskId },
     });
 
     if (!task) throw new Error("Task not found");
-    if (task.worker_id !== null) throw new Error("Task already claimed by another worker");
-    if (task.status !== "PENDING") throw new Error("Task is not available for claiming");
+    if (task.worker_id !== null)
+      throw new Error("Task already claimed by another worker");
+    if (task.status !== "PENDING")
+      throw new Error("Task is not available for claiming");
 
-    // Claim the task
     const updatedTask = await prisma.station_Task.update({
       where: { id: taskId },
       data: {
         worker_id: workerId,
         status: "IN_PROGRESS",
-        started_at: new Date()
-      }
+        started_at: new Date(),
+      },
     });
 
     return { message: "Task claimed successfully", task: updatedTask };
@@ -83,95 +81,124 @@ export const claimTaskService = async (taskId: string, workerId: string) => {
   }
 };
 
-export const processTaskService = async (taskId: string, items: any[], userId: string) => {
+const validateTaskItems = (task: any, inputItems: any[]) => {
+  let mismatch = false;
+  const processingItems: any[] = [];
+
+  for (const inputItem of inputItems) {
+    const originalItem = task.order.order_item.find(
+      (oi: any) => oi.laundry_item_id === inputItem.laundry_item_id,
+    );
+
+    if (!originalItem || originalItem.qty !== inputItem.qty) {
+      mismatch = true;
+    }
+
+    processingItems.push({
+      station_task_id: task.id,
+      laundry_item_id: inputItem.laundry_item_id,
+      qty: inputItem.qty,
+    });
+  }
+
+  if (inputItems.length !== task.order.order_item.length) mismatch = true;
+
+  return { mismatch, processingItems };
+};
+
+const handleTaskMismatch = async (taskId: string, processingItems: any[]) => {
+  await prisma.$transaction([
+    prisma.station_Task.update({
+      where: { id: taskId },
+      data: { status: "NEED_BYPASS" },
+    }),
+    prisma.station_Task_Item.createMany({
+      data: processingItems,
+    }),
+  ]);
+  return {
+    code: "MISMATCH",
+    message: "Quantity mismatch. Please request bypass.",
+  };
+};
+
+const completeTaskTransaction = async (task: any, processingItems: any[]) => {
+  await prisma.$transaction(async (tx: any) => {
+    await tx.station_Task.update({
+      where: { id: task.id },
+      data: {
+        status: "COMPLETED",
+        finished_at: new Date(),
+      },
+    });
+
+    await tx.station_Task_Item.createMany({
+      data: processingItems,
+    });
+
+    let nextStationType = null;
+    if (task.task_type === "WASHING") nextStationType = "IRONING";
+    else if (task.task_type === "IRONING") nextStationType = "PACKING";
+
+    if (nextStationType) {
+      await tx.station_Task.create({
+        data: {
+          order_id: task.order_id,
+          task_type: nextStationType as any,
+          worker_id: null,
+          status: "PENDING",
+        },
+      });
+    } else {
+      if (task.task_type === "PACKING") {
+        const order = await tx.order.findUnique({
+          where: { id: task.order_id },
+        });
+
+        const newStatus =
+          order?.status === "PAID" ? "READY_FOR_DELIVERY" : "WAITING_PAYMENT";
+
+        await tx.order.update({
+          where: { id: task.order_id },
+          data: { status: newStatus },
+        });
+      }
+    }
+  });
+
+  return { code: "SUCCESS", message: "Task processed successfully" };
+};
+
+export const processTaskService = async (
+  taskId: string,
+  items: any[],
+  userId: string,
+) => {
   try {
     const task = await prisma.station_Task.findUnique({
       where: { id: taskId },
-      include: { order: { include: { order_item: true } } }
+      include: { order: { include: { order_item: true } } },
     });
 
     if (!task) throw new Error("Task not found");
 
-    let mismatch = false;
-    const processingItems: any[] = [];
-
-    for (const inputItem of items) {
-      const originalItem = task.order.order_item.find((oi: any) => oi.laundry_item_id === inputItem.laundry_item_id);
-
-      if (!originalItem || originalItem.qty !== inputItem.qty) {
-        mismatch = true;
-      }
-
-      processingItems.push({
-        station_task_id: taskId,
-        laundry_item_id: inputItem.laundry_item_id,
-        qty: inputItem.qty
-      });
-    }
-
-    if (items.length !== task.order.order_item.length) mismatch = true;
+    const { mismatch, processingItems } = validateTaskItems(task, items);
 
     if (mismatch) {
-      await prisma.$transaction([
-        prisma.station_Task.update({
-          where: { id: taskId },
-          data: { status: "NEED_BYPASS" }
-        }),
-        prisma.station_Task_Item.createMany({
-          data: processingItems
-        }),
-      ]);
-      return { code: "MISMATCH", message: "Quantity mismatch. Please request bypass." };
+      return await handleTaskMismatch(taskId, processingItems);
     }
 
-    await prisma.$transaction(async (tx: any) => {
-      await tx.station_Task.update({
-        where: { id: taskId },
-        data: {
-          status: "COMPLETED",
-          finished_at: new Date()
-        }
-      });
-
-      await tx.station_Task_Item.createMany({
-        data: processingItems
-      });
-
-      // Determine next station type
-      let nextStationType = null;
-      if (task.task_type === 'WASHING') nextStationType = 'IRONING';
-      else if (task.task_type === 'IRONING') nextStationType = 'PACKING';
-
-      if (nextStationType) {
-        // Create next task WITHOUT assigning worker (Pool System)
-        await tx.station_Task.create({
-          data: {
-            order_id: task.order_id,
-            task_type: nextStationType as any,
-            worker_id: null, // Unassigned - goes to pool
-            status: "PENDING"
-          }
-        });
-      } else {
-        // Packing completed - update order status
-        if (task.task_type === 'PACKING') {
-          const order = await tx.order.findUnique({ where: { id: task.order_id } });
-          if (order?.status === 'PAID') {
-            await tx.order.update({ where: { id: task.order_id }, data: { status: 'READY_FOR_DELIVERY' } });
-          } else {
-            await tx.order.update({ where: { id: task.order_id }, data: { status: 'WAITING_PAYMENT' } });
-          }
-        }
-      }
-    });
-
-    return { message: "Task processed successfully" };
+    return await completeTaskTransaction(task, processingItems);
   } catch (error) {
     throw error;
   }
 };
 
-export const requestBypassService = async (taskId: string, reason: string, workerId: string) => {
+export const requestBypassService = async (
+  taskId: string,
+  reason: string,
+  workerId: string,
+) => {
   try {
     const worker = await prisma.staff.findUnique({
       where: { staff_id: workerId },
@@ -193,8 +220,8 @@ export const requestBypassService = async (taskId: string, reason: string, worke
         station_task_id: taskId,
         outlet_admin_id: outletAdmin.staff_id,
         reason,
-        status: "PENDING"
-      }
+        status: "PENDING",
+      },
     });
     return { message: "Bypass requested" };
   } catch (error) {
@@ -202,7 +229,11 @@ export const requestBypassService = async (taskId: string, reason: string, worke
   }
 };
 
-export const getWorkerHistoryService = async (workerId: string, page: number = 1, limit: number = 10) => {
+export const getWorkerHistoryService = async (
+  workerId: string,
+  page: number = 1,
+  limit: number = 10,
+) => {
   try {
     const skip = (page - 1) * limit;
 
@@ -243,7 +274,10 @@ export const getWorkerHistoryService = async (workerId: string, page: number = 1
         orderNumber: `ORD-${task.order_id.slice(-4).toUpperCase()}`,
         taskType: task.task_type,
         customerName: task.order.pickup_request?.customer?.name || "N/A",
-        itemCount: task.order.order_item.reduce((sum, item) => sum + item.qty, 0),
+        itemCount: task.order.order_item.reduce(
+          (sum, item) => sum + item.qty,
+          0,
+        ),
         completedAt: task.finished_at,
       })),
       meta: {

@@ -11,6 +11,7 @@ import { WorkerRoutes } from './routers/worker.router';
 import { DriverRoutes } from './routers/driver.router';
 import { LaundryItemRoutes } from './modules/laundry-item/laundry-item.routes';
 import { MasterRoutes } from './routers/master.router';
+import { OutletAdminRoutes } from './routers/outlet-admin.router';
 
 const router = Router();
 
@@ -26,5 +27,6 @@ router.use('/worker', WorkerRoutes);
 router.use('/driver', DriverRoutes);
 router.use('/laundry-items', LaundryItemRoutes);
 router.use('/master', MasterRoutes);
+router.use('/outlet-admin', OutletAdminRoutes);
 
 export default router;

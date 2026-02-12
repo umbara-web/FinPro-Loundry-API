@@ -1,6 +1,12 @@
 import { Router } from "express";
-import { getStationTasks, claimTask, processTask, requestBypass, getWorkerHistory } from "../controllers/worker.controller";
-import { authMiddleware } from "../common/middlewares/auth.middleware"; 
+import {
+  getStationTasks,
+  claimTask,
+  processTask,
+  requestBypass,
+  getWorkerHistory,
+} from "../controllers/worker.controller";
+import { authMiddleware } from "../common/middlewares/auth.middleware";
 
 const router = Router();
 

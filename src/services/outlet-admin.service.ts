@@ -1,4 +1,3 @@
-
 import prisma from "../configs/db";
 import { Staff_Type } from "@prisma/client";
 
@@ -27,9 +26,10 @@ export const getAttendanceReportService = async ({
       staff: {
         some: {
           staff_type: {
-            in: staffType && staffType !== "ALL"
-              ? [staffType as Staff_Type]
-              : [Staff_Type.WORKER, Staff_Type.DRIVER],
+            in:
+              staffType && staffType !== "ALL"
+                ? [staffType as Staff_Type]
+                : [Staff_Type.WORKER, Staff_Type.DRIVER],
           },
           outlet_id: outletId,
         },
@@ -87,4 +87,3 @@ export const getAttendanceReportService = async ({
     };
   });
 };
-

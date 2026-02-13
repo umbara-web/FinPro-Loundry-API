@@ -94,8 +94,18 @@ export const getWorkerHistory = async (
 
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
+    const startDate = req.query.startDate as string;
+    const endDate = req.query.endDate as string;
+    const taskType = req.query.taskType as string;
 
-    const result = await getWorkerHistoryService(workerId, page, limit);
+    const result = await getWorkerHistoryService(
+      workerId,
+      page,
+      limit,
+      startDate,
+      endDate,
+      taskType,
+    );
     res.status(200).send(result);
   } catch (error) {
     next(error);

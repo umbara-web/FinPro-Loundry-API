@@ -260,16 +260,32 @@ export const getWorkerHistoryService = async (
   workerId: string,
   page: number = 1,
   limit: number = 10,
+  startDate?: string,
+  endDate?: string,
+  taskType?: string,
 ) => {
   try {
     const skip = (page - 1) * limit;
 
+    const whereClause: any = {
+      worker_id: workerId,
+      status: "COMPLETED",
+    };
+
+    if (startDate && endDate) {
+      whereClause.finished_at = {
+        gte: new Date(startDate),
+        lte: new Date(endDate),
+      };
+    }
+
+    if (taskType && taskType !== "ALL") {
+      whereClause.task_type = taskType as Station_Task_Type;
+    }
+
     const [tasks, total] = await prisma.$transaction([
       prisma.station_Task.findMany({
-        where: {
-          worker_id: workerId,
-          status: "COMPLETED",
-        },
+        where: whereClause,
         include: {
           order: {
             include: {
@@ -287,10 +303,7 @@ export const getWorkerHistoryService = async (
         take: limit,
       }),
       prisma.station_Task.count({
-        where: {
-          worker_id: workerId,
-          status: "COMPLETED",
-        },
+        where: whereClause,
       }),
     ]);
 

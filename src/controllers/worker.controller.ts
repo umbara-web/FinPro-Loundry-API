@@ -5,6 +5,7 @@ import {
   requestBypassService,
   getWorkerHistoryService,
   claimTaskService,
+  getTaskDetailService,
 } from "../services/worker.service";
 
 export const getStationTasks = async (
@@ -95,6 +96,24 @@ export const getWorkerHistory = async (
     const limit = parseInt(req.query.limit as string) || 10;
 
     const result = await getWorkerHistoryService(workerId, page, limit);
+    res.status(200).send(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getTaskDetail = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { taskId } = req.params;
+    const workerId = req.user?.userId;
+
+    if (!workerId) throw new Error("Unauthorized");
+
+    const result = await getTaskDetailService(taskId, workerId);
     res.status(200).send(result);
   } catch (error) {
     next(error);

@@ -291,3 +291,36 @@ export const getWorkerHistoryService = async (
     throw error;
   }
 };
+
+export const getTaskDetailService = async (
+  taskId: string,
+  workerId: string,
+) => {
+  try {
+    const task = await prisma.station_Task.findUnique({
+      where: { id: taskId },
+      include: {
+        order: {
+          include: {
+            order_item: { include: { laundry_item: true } },
+            pickup_request: {
+              include: {
+                customer: {
+                  select: { name: true, profile_picture_url: true },
+                },
+              },
+            },
+          },
+        },
+        station_task_item: { include: { laundry_item: true } },
+        bypass_request: true,
+      },
+    });
+
+    if (!task) throw new Error("Task not found");
+
+    return task;
+  } catch (error) {
+    throw error;
+  }
+};

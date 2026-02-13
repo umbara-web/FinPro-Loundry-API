@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 
 export const getOutlets = async () => {
     return await prisma.outlet.findMany({
-        orderBy: { createdAt: 'desc' },
+        orderBy: { created_at: 'desc' },
     });
 };
 

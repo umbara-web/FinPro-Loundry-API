@@ -72,11 +72,11 @@ export const requestBypass = async (
 ) => {
   try {
     const { taskId } = req.params;
-    const { reason } = req.body;
+    const { reason, items } = req.body;
     const userId = req.user?.userId;
     if (!userId) throw new Error("Unauthorized");
 
-    const result = await requestBypassService(taskId, reason, userId);
+    const result = await requestBypassService(taskId, reason, userId, items);
     res.status(200).send(result);
   } catch (error) {
     next(error);

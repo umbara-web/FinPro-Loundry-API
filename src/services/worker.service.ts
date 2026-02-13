@@ -198,6 +198,7 @@ export const requestBypassService = async (
   taskId: string,
   reason: string,
   workerId: string,
+  items?: Array<{ laundry_item_id: string; qty: number }>,
 ) => {
   try {
     const worker = await prisma.staff.findUnique({
@@ -215,14 +216,40 @@ export const requestBypassService = async (
 
     if (!outletAdmin) throw new Error("No outlet admin found for this outlet");
 
-    await prisma.bypass_Request.create({
-      data: {
-        station_task_id: taskId,
-        outlet_admin_id: outletAdmin.staff_id,
-        reason,
-        status: "PENDING",
-      },
+    await prisma.$transaction(async (tx: any) => {
+      // 1. Clear previous worker-reported items (prevent data accumulation)
+      await tx.station_Task_Item.deleteMany({
+        where: { station_task_id: taskId },
+      });
+
+      // 2. Save the worker's current item counts
+      if (items && items.length > 0) {
+        await tx.station_Task_Item.createMany({
+          data: items.map((item) => ({
+            station_task_id: taskId,
+            laundry_item_id: item.laundry_item_id,
+            qty: item.qty,
+          })),
+        });
+      }
+
+      // 3. Update task status to NEED_BYPASS
+      await tx.station_Task.update({
+        where: { id: taskId },
+        data: { status: "NEED_BYPASS" },
+      });
+
+      // 4. Create bypass request for outlet admin
+      await tx.bypass_Request.create({
+        data: {
+          station_task_id: taskId,
+          outlet_admin_id: outletAdmin.staff_id,
+          reason,
+          status: "PENDING",
+        },
+      });
     });
+
     return { message: "Bypass requested" };
   } catch (error) {
     throw error;

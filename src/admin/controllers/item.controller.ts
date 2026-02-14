@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import * as itemService from '../services/item.service';
 import { ItemCategory, ItemUnit, ItemStatus } from '@prisma/client';
+import * as itemService from '../services/item.service';
 
 export const getItems = async (req: Request, res: Response) => {
     try {
@@ -54,12 +54,12 @@ export const createItem = async (req: Request, res: Response) => {
         };
 
         const data = {
-            ...rawData,
-            price: parseInt(rawData.price),
+            name: rawData.name,
+            price: parseInt(rawData.price, 10),
             category: mapCategory(rawData.category),
             unit: mapUnit(rawData.unit),
             status: mapStatus(rawData.status),
-            id: rawData.id
+            ...(rawData.imageUrl ? { imageUrl: rawData.imageUrl } : {}),
         };
 
         const item = await itemService.createItem(data);
@@ -96,11 +96,12 @@ export const updateItem = async (req: Request, res: Response) => {
         };
 
         const data = {
-            ...rawData,
-            ...(rawData.price ? { price: parseInt(rawData.price) } : {}),
-            ...(rawData.category ? { category: mapCategory(rawData.category) } : {}),
-            ...(rawData.unit ? { unit: mapUnit(rawData.unit) } : {}),
-            ...(rawData.status ? { status: mapStatus(rawData.status) } : {}),
+            ...(rawData.name !== undefined ? { name: rawData.name } : {}),
+            ...(rawData.price !== undefined ? { price: parseInt(rawData.price, 10) } : {}),
+            ...(rawData.category !== undefined ? { category: mapCategory(rawData.category) } : {}),
+            ...(rawData.unit !== undefined ? { unit: mapUnit(rawData.unit) } : {}),
+            ...(rawData.status !== undefined ? { status: mapStatus(rawData.status) } : {}),
+            ...(rawData.imageUrl !== undefined ? { imageUrl: rawData.imageUrl } : {}),
         };
 
         const item = await itemService.updateItem(req.params.id, data);

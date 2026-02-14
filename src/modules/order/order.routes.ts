@@ -31,4 +31,11 @@ router.post(
   OrderController.confirmOrder
 );
 
+router.get(
+  '/:id',
+  authMiddleware,
+  verificationGuard,
+  OrderController.getOrderById
+);
+
 export const OrderRoutes = router;

@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, Response, NextFunction } from 'express';
 import {
   getAvailablePickupsService,
   acceptPickupService,
@@ -10,7 +10,7 @@ import {
   getDriverHistoryService,
   getPickupByIdService,
   getDeliveryByIdService,
-} from "../services/driver.service";
+} from '../services/driver.service';
 
 export const getAvailablePickups = async (
   req: Request,
@@ -19,7 +19,7 @@ export const getAvailablePickups = async (
 ) => {
   try {
     const driver_id = req.user?.userId;
-    if (!driver_id) throw new Error("Unauthorized");
+    if (!driver_id) throw new Error('Unauthorized');
 
     const result = await getAvailablePickupsService(driver_id);
     res.status(200).send({ data: result });
@@ -35,7 +35,7 @@ export const acceptPickup = async (
 ) => {
   try {
     const driver_id = req.user?.userId;
-    if (!driver_id) throw new Error("Unauthorized");
+    if (!driver_id) throw new Error('Unauthorized');
     const { requestId } = req.params;
 
     const result = await acceptPickupService(driver_id, requestId);
@@ -68,7 +68,7 @@ export const getAvailableDeliveries = async (
 ) => {
   try {
     const driver_id = req.user?.userId;
-    if (!driver_id) throw new Error("Unauthorized");
+    if (!driver_id) throw new Error('Unauthorized');
 
     const result = await getAvailableDeliveriesService(driver_id);
     res.status(200).send({ data: result });
@@ -84,7 +84,7 @@ export const acceptDelivery = async (
 ) => {
   try {
     const driver_id = req.user?.userId;
-    if (!driver_id) throw new Error("Unauthorized");
+    if (!driver_id) throw new Error('Unauthorized');
     const { orderId } = req.params;
 
     const result = await acceptDeliveryService(driver_id, orderId);
@@ -117,7 +117,7 @@ export const getActiveJob = async (
 ) => {
   try {
     const driver_id = req.user?.userId;
-    if (!driver_id) throw new Error("Unauthorized");
+    if (!driver_id) throw new Error('Unauthorized');
 
     const result = await getActiveJobService(driver_id);
     res.status(200).send({ data: result });
@@ -133,7 +133,7 @@ export const getDriverHistory = async (
 ) => {
   try {
     const driver_id = req.user?.userId;
-    if (!driver_id) throw new Error("Unauthorized");
+    if (!driver_id) throw new Error('Unauthorized');
 
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
@@ -153,7 +153,7 @@ export const getPickupById = async (
 ) => {
   try {
     const driver_id = req.user?.userId;
-    if (!driver_id) throw new Error("Unauthorized");
+    if (!driver_id) throw new Error('Unauthorized');
     const { pickupId } = req.params;
 
     const result = await getPickupByIdService(driver_id, pickupId);
@@ -170,7 +170,7 @@ export const getDeliveryById = async (
 ) => {
   try {
     const driver_id = req.user?.userId;
-    if (!driver_id) throw new Error("Unauthorized");
+    if (!driver_id) throw new Error('Unauthorized');
     const { taskId } = req.params;
 
     const result = await getDeliveryByIdService(driver_id, taskId);

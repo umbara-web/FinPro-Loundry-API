@@ -16,6 +16,7 @@ export const getAddressById = async (id: string) => {
 };
 
 export const createAddress = async (data: Prisma.Customer_AddressUncheckedCreateInput) => {
+  // If this is set to primary, update others to false
   if (data.is_primary && data.customer_id) {
     await prisma.customer_Address.updateMany({
       where: { customer_id: data.customer_id },

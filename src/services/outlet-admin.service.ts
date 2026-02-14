@@ -1,5 +1,5 @@
-import prisma from "../configs/db";
-import { Staff_Type } from "@prisma/client";
+import prisma from '../configs/db';
+import { Staff_Type } from '@prisma/client';
 
 interface AttendanceReportParams {
   outletId: string;
@@ -27,7 +27,7 @@ export const getAttendanceReportService = async ({
         some: {
           staff_type: {
             in:
-              staffType && staffType !== "ALL"
+              staffType && staffType !== 'ALL'
                 ? [staffType as Staff_Type]
                 : [Staff_Type.WORKER, Staff_Type.DRIVER],
           },
@@ -58,7 +58,7 @@ export const getAttendanceReportService = async ({
       shift: true,
     },
     orderBy: {
-      check_in_at: "desc",
+      check_in_at: 'desc',
     },
   });
 

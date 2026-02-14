@@ -41,6 +41,20 @@ class OrderController {
             next(error);
         }
     }
+    static async getOrderById(req, res, next) {
+        try {
+            const user = OrderController.validateUser(req);
+            const { id } = req.params;
+            const result = await order_service_1.OrderService.getOrderById(user.userId, id);
+            res.status(200).json({
+                message: 'Order details retrieved successfully',
+                data: result,
+            });
+        }
+        catch (error) {
+            next(error);
+        }
+    }
     static validateUser(req) {
         const user = req.user;
         if (!user) {

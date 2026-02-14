@@ -1,4 +1,5 @@
 import { GetOrdersParams } from './order.types';
+import { Prisma } from '@prisma/client';
 
 export class OrderQueryHelper {
   static buildWhereClause(userId: string, params: GetOrdersParams) {
@@ -51,6 +52,44 @@ export class OrderQueryHelper {
     }
 
     return where;
+  }
+
+  static buildOrderBy(sortBy?: string, sortOrder?: 'asc' | 'desc') {
+    const orderBy: any = {};
+    if (sortBy) {
+      orderBy[sortBy] = sortOrder || 'desc';
+    } else {
+      orderBy.created_at = 'desc';
+    }
+    return orderBy;
+  }
+
+  static getPickupInclude() {
+    return {
+      customer_address: true,
+      outlet: true,
+      driver: { select: { id: true, name: true, phone: true } },
+      order: {
+        include: {
+          order_item: { include: { laundry_item: true } },
+          payment: { orderBy: { created_at: Prisma.SortOrder.desc } },
+        },
+      },
+    };
+  }
+
+  static getOrderInclude() {
+    return {
+      pickup_request: {
+        include: {
+          customer_address: true,
+          outlet: true,
+          driver: { select: { id: true, name: true, phone: true } },
+        },
+      },
+      order_item: { include: { laundry_item: true } },
+      payment: { orderBy: { created_at: Prisma.SortOrder.desc } },
+    };
   }
 
   static mapPickupStatusToOrderStatus(pickupStatus: string): string {

@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from "express";
-import { getAttendanceReportService } from "../services/outlet-admin.service";
-import prisma from "../configs/db";
+import { Request, Response, NextFunction } from 'express';
+import { getAttendanceReportService } from '../services/outlet-admin.service';
+import prisma from '../configs/db';
 
 export const getAttendanceReportController = async (
   req: Request,
@@ -11,18 +11,18 @@ export const getAttendanceReportController = async (
     const userId = (req.user as any)?.userId;
 
     if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
+      return res.status(401).json({ message: 'Unauthorized' });
     }
 
     // Fetch the admin's outlet from the Staff table
     const staffRecord = await prisma.staff.findFirst({
-      where: { staff_id: userId, staff_type: "OUTLET_ADMIN" },
+      where: { staff_id: userId, staff_type: 'OUTLET_ADMIN' },
     });
 
     if (!staffRecord) {
       return res
         .status(403)
-        .json({ message: "You are not assigned to any outlet" });
+        .json({ message: 'You are not assigned to any outlet' });
     }
 
     const { startDate, endDate, staffType } = req.query;
@@ -30,7 +30,7 @@ export const getAttendanceReportController = async (
     if (!startDate || !endDate) {
       return res
         .status(400)
-        .json({ message: "Start date and end date are required" });
+        .json({ message: 'Start date and end date are required' });
     }
 
     const start = new Date(startDate as string);
@@ -47,7 +47,7 @@ export const getAttendanceReportController = async (
     });
 
     res.status(200).send({
-      message: "Attendance report fetched successfully",
+      message: 'Attendance report fetched successfully',
       data: report,
     });
   } catch (error) {

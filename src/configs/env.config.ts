@@ -19,7 +19,7 @@ const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY || '';
 const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || '';
 const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || '';
 const GMAIL_EMAIL = process.env.GMAIL_EMAIL || '';
-const GMAIL_APP_PASS = process.env.GMAIL_APP_PASS || '';
+const GMAIL_APP_PASS = (process.env.GMAIL_APP_PASS || '').replace(/\s/g, '');
 
 export {
   PORT,

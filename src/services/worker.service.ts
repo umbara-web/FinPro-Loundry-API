@@ -3,7 +3,7 @@ import { Station_Task_Type } from '@prisma/client';
 
 export const getStationTasksService = async (
   workerId: string,
-  stationType: string,
+  stationType: string
 ) => {
   try {
     const worker = await prisma.staff.findUnique({
@@ -87,7 +87,7 @@ const validateTaskItems = (task: any, inputItems: any[]) => {
 
   for (const inputItem of inputItems) {
     const originalItem = task.order.order_item.find(
-      (oi: any) => oi.laundry_item_id === inputItem.laundry_item_id,
+      (oi: any) => oi.laundry_item_id === inputItem.laundry_item_id
     );
 
     if (!originalItem || originalItem.qty !== inputItem.qty) {
@@ -153,15 +153,30 @@ const completeTaskTransaction = async (task: any, processingItems: any[]) => {
       if (task.task_type === 'PACKING') {
         const order = await tx.order.findUnique({
           where: { id: task.order_id },
+          include: { payment: true },
         });
 
-        const newStatus =
-          order?.status === 'PAID' ? 'READY_FOR_DELIVERY' : 'WAITING_PAYMENT';
+        const isPaid =
+          order?.status === 'PAID' ||
+          order?.paid_at != null ||
+          order?.payment?.some((p: any) => p.status === 'PAID');
+
+        const newStatus = isPaid ? 'READY_FOR_DELIVERY' : 'WAITING_PAYMENT';
 
         await tx.order.update({
           where: { id: task.order_id },
           data: { status: newStatus },
         });
+
+        if (newStatus === 'READY_FOR_DELIVERY') {
+          await tx.driver_Task.create({
+            data: {
+              order_id: task.order_id,
+              task_type: 'DELIVERY',
+              status: 'AVAILABLE',
+            },
+          });
+        }
       }
     }
   });
@@ -172,7 +187,7 @@ const completeTaskTransaction = async (task: any, processingItems: any[]) => {
 export const processTaskService = async (
   taskId: string,
   items: any[],
-  userId: string,
+  userId: string
 ) => {
   try {
     const task = await prisma.station_Task.findUnique({
@@ -198,7 +213,7 @@ export const requestBypassService = async (
   taskId: string,
   reason: string,
   workerId: string,
-  items?: Array<{ laundry_item_id: string; qty: number }>,
+  items?: Array<{ laundry_item_id: string; qty: number }>
 ) => {
   try {
     const worker = await prisma.staff.findUnique({
@@ -262,7 +277,7 @@ export const getWorkerHistoryService = async (
   limit: number = 10,
   startDate?: string,
   endDate?: string,
-  taskType?: string,
+  taskType?: string
 ) => {
   try {
     const skip = (page - 1) * limit;
@@ -316,7 +331,7 @@ export const getWorkerHistoryService = async (
         customerName: task.order.pickup_request?.customer?.name || 'N/A',
         itemCount: task.order.order_item.reduce(
           (sum, item) => sum + item.qty,
-          0,
+          0
         ),
         completedAt: task.finished_at,
       })),
@@ -334,7 +349,7 @@ export const getWorkerHistoryService = async (
 
 export const getTaskDetailService = async (
   taskId: string,
-  workerId: string,
+  workerId: string
 ) => {
   try {
     const task = await prisma.station_Task.findUnique({

@@ -8,7 +8,8 @@
     "start": "npm run build && node dist/main.js",
     "dev": "nodemon",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "sync-types": "ts-node scripts/generate-types.ts"
+    "sync-types": "ts-node scripts/generate-types.ts",
+    "format": "prettier --write ."
   },
   "keywords": [],
   "author": "",
@@ -46,6 +47,7 @@
     "@types/node": "^25.0.3",
     "@types/nodemailer": "^7.0.4",
     "nodemon": "^3.1.11",
+    "prettier": "^3.8.1",
     "prisma": "^6.19.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"

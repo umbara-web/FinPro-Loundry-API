@@ -78,13 +78,28 @@ function createPickupInDb(data: CreatePickupInput, assignedOutletId: string) {
         status: 'CREATED',
       };
 
-      // Only add order items if they exist
       if (data.items && data.items.length > 0) {
+        const laundryItemIds = [...new Set(data.items.map((i) => i.laundryItemId))];
+        const laundryItems = await tx.laundry_Item.findMany({
+          where: { id: { in: laundryItemIds } },
+          select: { id: true, name: true, price: true, unit: true },
+        });
+        const itemMap = new Map(laundryItems.map((li) => [li.id, li]));
+
         orderData.order_item = {
-          create: data.items.map((item) => ({
-            laundry_item_id: item.laundryItemId,
-            qty: item.qty,
-          })),
+          create: data.items.map((item) => {
+            const laundryItem = itemMap.get(item.laundryItemId);
+            if (!laundryItem) {
+              throw createCustomError(400, `Laundry item not found: ${item.laundryItemId}`);
+            }
+            return {
+              laundry_item_id: item.laundryItemId,
+              itemName: laundryItem.name,
+              price: laundryItem.price,
+              unit: laundryItem.unit,
+              qty: item.qty,
+            };
+          }),
         };
       }
 
@@ -93,7 +108,7 @@ function createPickupInDb(data: CreatePickupInput, assignedOutletId: string) {
 
     return pickup;
   });
-}
+};
 
 export async function getPickupRequestsByCustomer(customerId: string) {
   return prisma.pickup_Request.findMany({
@@ -153,3 +168,4 @@ export async function cancelPickupRequest(id: string, customerId: string) {
     data: { status: 'CANCELLED' },
   });
 }
+

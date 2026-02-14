@@ -1,5 +1,5 @@
-import prisma from "../configs/db";
-import { createCustomError } from "../common/utils/customError";
+import prisma from '../configs/db';
+import { createCustomError } from '../common/utils/customError';
 
 const hasActiveJob = async (driver_id: string): Promise<boolean> => {
   try {
@@ -7,7 +7,7 @@ const hasActiveJob = async (driver_id: string): Promise<boolean> => {
       where: {
         assigned_driver_id: driver_id,
         status: {
-          in: ["DRIVER_ASSIGNED", "PICKED_UP"],
+          in: ['DRIVER_ASSIGNED', 'PICKED_UP'],
         },
       },
     });
@@ -18,7 +18,7 @@ const hasActiveJob = async (driver_id: string): Promise<boolean> => {
       where: {
         driver_id: driver_id,
         status: {
-          in: ["ACCEPTED", "IN_PROGRESS"],
+          in: ['ACCEPTED', 'IN_PROGRESS'],
         },
       },
     });
@@ -36,7 +36,7 @@ export const getActiveJobService = async (driver_id: string) => {
         where: {
           assigned_driver_id: driver_id,
           status: {
-            in: ["DRIVER_ASSIGNED", "PICKED_UP"],
+            in: ['DRIVER_ASSIGNED', 'PICKED_UP'],
           },
         },
         include: {
@@ -48,7 +48,7 @@ export const getActiveJobService = async (driver_id: string) => {
         where: {
           driver_id: driver_id,
           status: {
-            in: ["ACCEPTED", "IN_PROGRESS"],
+            in: ['ACCEPTED', 'IN_PROGRESS'],
           },
         },
         include: {
@@ -68,14 +68,14 @@ export const getActiveJobService = async (driver_id: string) => {
 
     if (activePickup) {
       return {
-        type: "PICKUP",
+        type: 'PICKUP',
         data: activePickup,
       };
     }
 
     if (activeDelivery) {
       return {
-        type: "DELIVERY",
+        type: 'DELIVERY',
         data: activeDelivery,
       };
     }
@@ -97,7 +97,7 @@ export const getDriverHistoryService = async (
     const fetchLimit = skip + limit;
 
     let dateFilter: { gte: Date; lt: Date } | undefined;
-    if (date === "today") {
+    if (date === 'today') {
       const now = new Date();
       const startOfDay = new Date(
         now.getFullYear(),
@@ -116,7 +116,7 @@ export const getDriverHistoryService = async (
       prisma.pickup_Request.findMany({
         where: {
           assigned_driver_id: driver_id,
-          status: "ARRIVED_OUTLET",
+          status: 'ARRIVED_OUTLET',
           ...(dateFilter ? { updated_at: dateFilter } : {}),
         },
         include: {
@@ -130,7 +130,7 @@ export const getDriverHistoryService = async (
       prisma.driver_Task.findMany({
         where: {
           driver_id: driver_id,
-          status: "DONE",
+          status: 'DONE',
           ...(dateFilter ? { finished_at: dateFilter } : {}),
         },
         include: {
@@ -153,23 +153,23 @@ export const getDriverHistoryService = async (
     const history = [
       ...completedPickups.map((p) => ({
         id: p.id,
-        type: "PICKUP" as const,
+        type: 'PICKUP' as const,
         order_number: p.order[0]?.id
           ? `ORD-${p.order[0].id.slice(-4).toUpperCase()}`
           : `PKP-${p.id.slice(-4).toUpperCase()}`,
-        customer_name: p.customer?.name || "N/A",
-        address: p.customer_address?.address || "N/A",
+        customer_name: p.customer?.name || 'N/A',
+        address: p.customer_address?.address || 'N/A',
         completed_at: p.updated_at,
-        status: "SELESAI",
+        status: 'SELESAI',
       })),
       ...completedDeliveries.map((d) => ({
         id: d.id,
-        type: "DELIVERY" as const,
+        type: 'DELIVERY' as const,
         order_number: `ORD-${d.order_id.slice(-4).toUpperCase()}`,
-        customer_name: d.order?.pickup_request?.customer?.name || "N/A",
-        address: d.order?.pickup_request?.customer_address?.address || "N/A",
+        customer_name: d.order?.pickup_request?.customer?.name || 'N/A',
+        address: d.order?.pickup_request?.customer_address?.address || 'N/A',
         completed_at: d.finished_at || d.order.updated_at,
-        status: "SELESAI",
+        status: 'SELESAI',
       })),
     ].sort(
       (a, b) =>
@@ -181,7 +181,7 @@ export const getDriverHistoryService = async (
       prisma.pickup_Request.count({
         where: {
           assigned_driver_id: driver_id,
-          status: "ARRIVED_OUTLET",
+          status: 'ARRIVED_OUTLET',
           ...(dateFilter ? { updated_at: dateFilter } : {}),
         },
       }),
@@ -219,12 +219,12 @@ export const getAvailablePickupsService = async (driver_id: string) => {
       include: { outlet: true },
     });
 
-    if (!driver) throw new Error("Driver profile not found");
+    if (!driver) throw new Error('Driver profile not found');
 
     return await prisma.pickup_Request.findMany({
       where: {
         assigned_outlet_id: driver.outlet_id,
-        status: "WAITING_DRIVER",
+        status: 'WAITING_DRIVER',
         assigned_driver_id: null,
       },
       include: {
@@ -252,7 +252,7 @@ export const getPickupByIdService = async (
         id: pickupId,
         OR: [
           { assigned_driver_id: driver_id },
-          { status: "WAITING_DRIVER", assigned_outlet_id: driver?.outlet_id },
+          { status: 'WAITING_DRIVER', assigned_outlet_id: driver?.outlet_id },
         ],
       },
       include: {
@@ -265,7 +265,7 @@ export const getPickupByIdService = async (
     if (!pickup)
       throw createCustomError(
         404,
-        "Pickup tidak ditemukan atau bukan milik Anda",
+        'Pickup tidak ditemukan atau bukan milik Anda',
       );
 
     return pickup;
@@ -282,7 +282,7 @@ export const acceptPickupService = async (
     if (await hasActiveJob(driver_id)) {
       throw createCustomError(
         400,
-        "Anda sudah memiliki pekerjaan aktif. Selesaikan terlebih dahulu.",
+        'Anda sudah memiliki pekerjaan aktif. Selesaikan terlebih dahulu.',
       );
     }
 
@@ -290,11 +290,11 @@ export const acceptPickupService = async (
       where: { id: requestId },
       data: {
         assigned_driver_id: driver_id,
-        status: "DRIVER_ASSIGNED",
+        status: 'DRIVER_ASSIGNED',
       },
     });
 
-    return { message: "Pickup accepted" };
+    return { message: 'Pickup accepted' };
   } catch (error) {
     throw error;
   }
@@ -309,7 +309,7 @@ export const updatePickupStatusService = async (
       where: { id: requestId },
       data: { status },
     });
-    return { message: "Status updated" };
+    return { message: 'Status updated' };
   } catch (error) {
     throw error;
   }
@@ -321,12 +321,12 @@ export const getAvailableDeliveriesService = async (driver_id: string) => {
       where: { staff_id: driver_id },
     });
 
-    if (!driver) throw new Error("Driver profile not found");
+    if (!driver) throw new Error('Driver profile not found');
 
     return await prisma.order.findMany({
       where: {
         outlet_id: driver.outlet_id,
-        status: "READY_FOR_DELIVERY",
+        status: 'READY_FOR_DELIVERY',
       },
       include: {
         pickup_request: {
@@ -347,7 +347,7 @@ export const acceptDeliveryService = async (
     if (await hasActiveJob(driver_id)) {
       throw createCustomError(
         400,
-        "Anda sudah memiliki pekerjaan aktif. Selesaikan terlebih dahulu.",
+        'Anda sudah memiliki pekerjaan aktif. Selesaikan terlebih dahulu.',
       );
     }
 
@@ -356,20 +356,20 @@ export const acceptDeliveryService = async (
         data: {
           driver_id: driver_id,
           order_id: orderId,
-          task_type: "DELIVERY",
-          status: "ACCEPTED",
+          task_type: 'DELIVERY',
+          status: 'ACCEPTED',
         },
       });
 
       await tx.order.update({
         where: { id: orderId },
-        data: { status: "ON_DELIVERY" },
+        data: { status: 'ON_DELIVERY' },
       });
 
       return newTask;
     });
 
-    return { message: "Delivery accepted", data: task };
+    return { message: 'Delivery accepted', data: task };
   } catch (error) {
     throw error;
   }
@@ -406,7 +406,7 @@ export const getDeliveryByIdService = async (
     if (!task)
       throw createCustomError(
         404,
-        "Delivery task tidak ditemukan atau bukan milik Anda",
+        'Delivery task tidak ditemukan atau bukan milik Anda',
       );
 
     return task;
@@ -422,22 +422,22 @@ export const updateDeliveryStatusService = async (
   try {
     await prisma.driver_Task.update({
       where: { id: taskId },
-      data: { status, finished_at: status === "DONE" ? new Date() : null },
+      data: { status, finished_at: status === 'DONE' ? new Date() : null },
     });
 
-    if (status === "DONE") {
+    if (status === 'DONE') {
       const task = await prisma.driver_Task.findUnique({
         where: { id: taskId },
       });
       if (task) {
         await prisma.order.update({
           where: { id: task.order_id },
-          data: { status: "DELIVERED" },
+          data: { status: 'DELIVERED' },
         });
       }
     }
 
-    return { message: "Delivery status updated" };
+    return { message: 'Delivery status updated' };
   } catch (error) {
     throw error;
   }

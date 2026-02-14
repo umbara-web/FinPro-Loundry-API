@@ -1,4 +1,4 @@
-import prisma from "../configs/db";
+import prisma from '../configs/db';
 
 export const clockInService = async (staff_id: string) => {
   try {
@@ -7,9 +7,9 @@ export const clockInService = async (staff_id: string) => {
       include: { shift: true, outlet: true },
     });
 
-    if (!staff) throw new Error("Staff profile not found");
+    if (!staff) throw new Error('Staff profile not found');
     if (!staff.shift) {
-      throw new Error("No shift assigned to this staff");
+      throw new Error('No shift assigned to this staff');
     }
 
     const today = new Date();
@@ -25,7 +25,7 @@ export const clockInService = async (staff_id: string) => {
     });
 
     if (existingAttendance) {
-      throw new Error("Already clocked in today");
+      throw new Error('Already clocked in today');
     }
 
     const currentShift = staff.shift;
@@ -35,11 +35,11 @@ export const clockInService = async (staff_id: string) => {
         staff_id,
         outlet_id: staff.outlet_id,
         shift_id: currentShift.id,
-        status: "PRESENT",
+        status: 'PRESENT',
       },
     });
 
-    return { message: "Clock in successful" };
+    return { message: 'Clock in successful' };
   } catch (error) {
     throw error;
   }
@@ -59,7 +59,7 @@ export const clockOutService = async (staff_id: string) => {
     });
 
     if (!attendance) {
-      throw new Error("No active check-in found for today");
+      throw new Error('No active check-in found for today');
     }
 
     await prisma.attendance.update({
@@ -67,7 +67,7 @@ export const clockOutService = async (staff_id: string) => {
       data: { check_out_at: new Date() },
     });
 
-    return { message: "Clock out successful" };
+    return { message: 'Clock out successful' };
   } catch (error) {
     throw error;
   }
@@ -77,7 +77,7 @@ export const getHistoryService = async (staff_id: string) => {
   try {
     return await prisma.attendance.findMany({
       where: { staff_id },
-      orderBy: { check_in_at: "desc" },
+      orderBy: { check_in_at: 'desc' },
       take: 30,
       include: { outlet: true },
     });
@@ -134,12 +134,12 @@ export const getStatusService = async (staff_id: string) => {
       checkOutTime,
       weeklyHours: Math.round(weeklyHours * 10) / 10,
       overtime: Math.max(0, Math.round((weeklyHours - 40) * 10) / 10),
-      station: staff?.outlet?.name || "Unknown",
+      station: staff?.outlet?.name || 'Unknown',
       staffName: staff_id,
       lastShiftEnd: checkOutTime,
-      shiftName: staff?.shift?.name || "No Shift Assigned",
-      shiftStart: staff?.shift?.start_time || "--:--",
-      shiftEnd: staff?.shift?.end_time || "--:--",
+      shiftName: staff?.shift?.name || 'No Shift Assigned',
+      shiftStart: staff?.shift?.start_time || '--:--',
+      shiftEnd: staff?.shift?.end_time || '--:--',
     };
   } catch (error) {
     throw error;

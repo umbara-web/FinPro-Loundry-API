@@ -1,5 +1,5 @@
-import prisma from "../configs/db";
-import { Station_Task_Type } from "@prisma/client";
+import prisma from '../configs/db';
+import { Station_Task_Type } from '@prisma/client';
 
 export const getStationTasksService = async (
   workerId: string,
@@ -10,7 +10,7 @@ export const getStationTasksService = async (
       where: { staff_id: workerId },
     });
 
-    if (!worker) throw new Error("Worker not found");
+    if (!worker) throw new Error('Worker not found');
 
     const includeRelations = {
       order: {
@@ -31,21 +31,21 @@ export const getStationTasksService = async (
       where: {
         worker_id: null,
         task_type: stationType as Station_Task_Type,
-        status: "PENDING",
+        status: 'PENDING',
         order: { outlet_id: worker.outlet_id },
       },
       include: includeRelations,
-      orderBy: { started_at: "asc" },
+      orderBy: { started_at: 'asc' },
     });
 
     const myTasks = await prisma.station_Task.findMany({
       where: {
         worker_id: workerId,
         task_type: stationType as Station_Task_Type,
-        status: { in: ["IN_PROGRESS", "NEED_BYPASS"] },
+        status: { in: ['IN_PROGRESS', 'NEED_BYPASS'] },
       },
       include: includeRelations,
-      orderBy: { started_at: "asc" },
+      orderBy: { started_at: 'asc' },
     });
 
     return { pool: poolTasks, mine: myTasks };
@@ -60,22 +60,22 @@ export const claimTaskService = async (taskId: string, workerId: string) => {
       where: { id: taskId },
     });
 
-    if (!task) throw new Error("Task not found");
+    if (!task) throw new Error('Task not found');
     if (task.worker_id !== null)
-      throw new Error("Task already claimed by another worker");
-    if (task.status !== "PENDING")
-      throw new Error("Task is not available for claiming");
+      throw new Error('Task already claimed by another worker');
+    if (task.status !== 'PENDING')
+      throw new Error('Task is not available for claiming');
 
     const updatedTask = await prisma.station_Task.update({
       where: { id: taskId },
       data: {
         worker_id: workerId,
-        status: "IN_PROGRESS",
+        status: 'IN_PROGRESS',
         started_at: new Date(),
       },
     });
 
-    return { message: "Task claimed successfully", task: updatedTask };
+    return { message: 'Task claimed successfully', task: updatedTask };
   } catch (error) {
     throw error;
   }
@@ -110,15 +110,15 @@ const handleTaskMismatch = async (taskId: string, processingItems: any[]) => {
   await prisma.$transaction([
     prisma.station_Task.update({
       where: { id: taskId },
-      data: { status: "NEED_BYPASS" },
+      data: { status: 'NEED_BYPASS' },
     }),
     prisma.station_Task_Item.createMany({
       data: processingItems,
     }),
   ]);
   return {
-    code: "MISMATCH",
-    message: "Quantity mismatch. Please request bypass.",
+    code: 'MISMATCH',
+    message: 'Quantity mismatch. Please request bypass.',
   };
 };
 
@@ -127,7 +127,7 @@ const completeTaskTransaction = async (task: any, processingItems: any[]) => {
     await tx.station_Task.update({
       where: { id: task.id },
       data: {
-        status: "COMPLETED",
+        status: 'COMPLETED',
         finished_at: new Date(),
       },
     });
@@ -137,8 +137,8 @@ const completeTaskTransaction = async (task: any, processingItems: any[]) => {
     });
 
     let nextStationType = null;
-    if (task.task_type === "WASHING") nextStationType = "IRONING";
-    else if (task.task_type === "IRONING") nextStationType = "PACKING";
+    if (task.task_type === 'WASHING') nextStationType = 'IRONING';
+    else if (task.task_type === 'IRONING') nextStationType = 'PACKING';
 
     if (nextStationType) {
       await tx.station_Task.create({
@@ -146,17 +146,17 @@ const completeTaskTransaction = async (task: any, processingItems: any[]) => {
           order_id: task.order_id,
           task_type: nextStationType as any,
           worker_id: null,
-          status: "PENDING",
+          status: 'PENDING',
         },
       });
     } else {
-      if (task.task_type === "PACKING") {
+      if (task.task_type === 'PACKING') {
         const order = await tx.order.findUnique({
           where: { id: task.order_id },
         });
 
         const newStatus =
-          order?.status === "PAID" ? "READY_FOR_DELIVERY" : "WAITING_PAYMENT";
+          order?.status === 'PAID' ? 'READY_FOR_DELIVERY' : 'WAITING_PAYMENT';
 
         await tx.order.update({
           where: { id: task.order_id },
@@ -166,7 +166,7 @@ const completeTaskTransaction = async (task: any, processingItems: any[]) => {
     }
   });
 
-  return { code: "SUCCESS", message: "Task processed successfully" };
+  return { code: 'SUCCESS', message: 'Task processed successfully' };
 };
 
 export const processTaskService = async (
@@ -180,7 +180,7 @@ export const processTaskService = async (
       include: { order: { include: { order_item: true } } },
     });
 
-    if (!task) throw new Error("Task not found");
+    if (!task) throw new Error('Task not found');
 
     const { mismatch, processingItems } = validateTaskItems(task, items);
 
@@ -205,16 +205,16 @@ export const requestBypassService = async (
       where: { staff_id: workerId },
     });
 
-    if (!worker) throw new Error("Worker not found");
+    if (!worker) throw new Error('Worker not found');
 
     const outletAdmin = await prisma.staff.findFirst({
       where: {
         outlet_id: worker.outlet_id,
-        staff_type: "OUTLET_ADMIN",
+        staff_type: 'OUTLET_ADMIN',
       },
     });
 
-    if (!outletAdmin) throw new Error("No outlet admin found for this outlet");
+    if (!outletAdmin) throw new Error('No outlet admin found for this outlet');
 
     await prisma.$transaction(async (tx: any) => {
       // 1. Clear previous worker-reported items (prevent data accumulation)
@@ -236,7 +236,7 @@ export const requestBypassService = async (
       // 3. Update task status to NEED_BYPASS
       await tx.station_Task.update({
         where: { id: taskId },
-        data: { status: "NEED_BYPASS" },
+        data: { status: 'NEED_BYPASS' },
       });
 
       // 4. Create bypass request for outlet admin
@@ -245,12 +245,12 @@ export const requestBypassService = async (
           station_task_id: taskId,
           outlet_admin_id: outletAdmin.staff_id,
           reason,
-          status: "PENDING",
+          status: 'PENDING',
         },
       });
     });
 
-    return { message: "Bypass requested" };
+    return { message: 'Bypass requested' };
   } catch (error) {
     throw error;
   }
@@ -269,7 +269,7 @@ export const getWorkerHistoryService = async (
 
     const whereClause: any = {
       worker_id: workerId,
-      status: "COMPLETED",
+      status: 'COMPLETED',
     };
 
     if (startDate && endDate) {
@@ -279,7 +279,7 @@ export const getWorkerHistoryService = async (
       };
     }
 
-    if (taskType && taskType !== "ALL") {
+    if (taskType && taskType !== 'ALL') {
       whereClause.task_type = taskType as Station_Task_Type;
     }
 
@@ -298,7 +298,7 @@ export const getWorkerHistoryService = async (
             },
           },
         },
-        orderBy: { finished_at: "desc" },
+        orderBy: { finished_at: 'desc' },
         skip,
         take: limit,
       }),
@@ -313,7 +313,7 @@ export const getWorkerHistoryService = async (
         orderId: task.order_id,
         orderNumber: `ORD-${task.order_id.slice(-4).toUpperCase()}`,
         taskType: task.task_type,
-        customerName: task.order.pickup_request?.customer?.name || "N/A",
+        customerName: task.order.pickup_request?.customer?.name || 'N/A',
         itemCount: task.order.order_item.reduce(
           (sum, item) => sum + item.qty,
           0,
@@ -357,7 +357,7 @@ export const getTaskDetailService = async (
       },
     });
 
-    if (!task) throw new Error("Task not found");
+    if (!task) throw new Error('Task not found');
 
     return task;
   } catch (error) {

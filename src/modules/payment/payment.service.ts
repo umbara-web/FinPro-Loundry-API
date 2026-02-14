@@ -102,7 +102,11 @@ export class PaymentService {
   ) {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { pickup_request: true, payment: true },
+      include: {
+        pickup_request: true,
+        payment: true,
+        order_item: { include: { laundry_item: true } },
+      },
     });
 
     if (!order) {
@@ -118,7 +122,14 @@ export class PaymentService {
       throw new Error('Order already paid');
     }
 
-    const amount = order.price_total;
+    // Calculate amount from order items if price_total is 0
+    let amount = order.price_total;
+    if (amount === 0 && order.order_item.length > 0) {
+      amount = order.order_item.reduce((sum, item) => {
+        const unitPrice = item.price || item.laundry_item?.price || 0;
+        return sum + unitPrice * item.qty;
+      }, 0);
+    }
 
     const payment = await prisma.payment.create({
       data: {

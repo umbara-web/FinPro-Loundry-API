@@ -5,10 +5,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getWorkerHistoryService = exports.requestBypassService = exports.processTaskService = exports.claimTaskService = exports.getStationTasksService = void 0;
 const db_1 = __importDefault(require("../configs/db"));
-// Get tasks: both pool (unassigned) and mine (assigned to me)
 const getStationTasksService = async (workerId, stationType) => {
     try {
-        // Get worker's outlet first
         const worker = await db_1.default.staff.findUnique({
             where: { staff_id: workerId },
         });
@@ -20,34 +18,32 @@ const getStationTasksService = async (workerId, stationType) => {
                     order_item: { include: { laundry_item: true } },
                     pickup_request: {
                         include: {
-                            customer: { select: { name: true, profile_picture_url: true } }
-                        }
-                    }
-                }
+                            customer: { select: { name: true, profile_picture_url: true } },
+                        },
+                    },
+                },
             },
             station_task_item: { include: { laundry_item: true } },
-            bypass_request: true
+            bypass_request: true,
         };
-        // Pool tasks: unassigned tasks for this outlet's orders
         const poolTasks = await db_1.default.station_Task.findMany({
             where: {
                 worker_id: null,
                 task_type: stationType,
                 status: "PENDING",
-                order: { outlet_id: worker.outlet_id }
+                order: { outlet_id: worker.outlet_id },
             },
             include: includeRelations,
-            orderBy: { started_at: 'asc' }
+            orderBy: { started_at: "asc" },
         });
-        // My tasks: assigned to me
         const myTasks = await db_1.default.station_Task.findMany({
             where: {
                 worker_id: workerId,
                 task_type: stationType,
-                status: { in: ['IN_PROGRESS', 'NEED_BYPASS'] }
+                status: { in: ["IN_PROGRESS", "NEED_BYPASS"] },
             },
             include: includeRelations,
-            orderBy: { started_at: 'asc' }
+            orderBy: { started_at: "asc" },
         });
         return { pool: poolTasks, mine: myTasks };
     }
@@ -56,12 +52,10 @@ const getStationTasksService = async (workerId, stationType) => {
     }
 };
 exports.getStationTasksService = getStationTasksService;
-// Claim a task from the pool
 const claimTaskService = async (taskId, workerId) => {
     try {
-        // Verify task exists and is available
         const task = await db_1.default.station_Task.findUnique({
-            where: { id: taskId }
+            where: { id: taskId },
         });
         if (!task)
             throw new Error("Task not found");
@@ -69,14 +63,13 @@ const claimTaskService = async (taskId, workerId) => {
             throw new Error("Task already claimed by another worker");
         if (task.status !== "PENDING")
             throw new Error("Task is not available for claiming");
-        // Claim the task
         const updatedTask = await db_1.default.station_Task.update({
             where: { id: taskId },
             data: {
                 worker_id: workerId,
                 status: "IN_PROGRESS",
-                started_at: new Date()
-            }
+                started_at: new Date(),
+            },
         });
         return { message: "Task claimed successfully", task: updatedTask };
     }
@@ -85,83 +78,94 @@ const claimTaskService = async (taskId, workerId) => {
     }
 };
 exports.claimTaskService = claimTaskService;
+const validateTaskItems = (task, inputItems) => {
+    let mismatch = false;
+    const processingItems = [];
+    for (const inputItem of inputItems) {
+        const originalItem = task.order.order_item.find((oi) => oi.laundry_item_id === inputItem.laundry_item_id);
+        if (!originalItem || originalItem.qty !== inputItem.qty) {
+            mismatch = true;
+        }
+        processingItems.push({
+            station_task_id: task.id,
+            laundry_item_id: inputItem.laundry_item_id,
+            qty: inputItem.qty,
+        });
+    }
+    if (inputItems.length !== task.order.order_item.length)
+        mismatch = true;
+    return { mismatch, processingItems };
+};
+const handleTaskMismatch = async (taskId, processingItems) => {
+    await db_1.default.$transaction([
+        db_1.default.station_Task.update({
+            where: { id: taskId },
+            data: { status: "NEED_BYPASS" },
+        }),
+        db_1.default.station_Task_Item.createMany({
+            data: processingItems,
+        }),
+    ]);
+    return {
+        code: "MISMATCH",
+        message: "Quantity mismatch. Please request bypass.",
+    };
+};
+const completeTaskTransaction = async (task, processingItems) => {
+    await db_1.default.$transaction(async (tx) => {
+        await tx.station_Task.update({
+            where: { id: task.id },
+            data: {
+                status: "COMPLETED",
+                finished_at: new Date(),
+            },
+        });
+        await tx.station_Task_Item.createMany({
+            data: processingItems,
+        });
+        let nextStationType = null;
+        if (task.task_type === "WASHING")
+            nextStationType = "IRONING";
+        else if (task.task_type === "IRONING")
+            nextStationType = "PACKING";
+        if (nextStationType) {
+            await tx.station_Task.create({
+                data: {
+                    order_id: task.order_id,
+                    task_type: nextStationType,
+                    worker_id: null,
+                    status: "PENDING",
+                },
+            });
+        }
+        else {
+            if (task.task_type === "PACKING") {
+                const order = await tx.order.findUnique({
+                    where: { id: task.order_id },
+                });
+                const newStatus = (order === null || order === void 0 ? void 0 : order.status) === "PAID" ? "READY_FOR_DELIVERY" : "WAITING_PAYMENT";
+                await tx.order.update({
+                    where: { id: task.order_id },
+                    data: { status: newStatus },
+                });
+            }
+        }
+    });
+    return { code: "SUCCESS", message: "Task processed successfully" };
+};
 const processTaskService = async (taskId, items, userId) => {
     try {
         const task = await db_1.default.station_Task.findUnique({
             where: { id: taskId },
-            include: { order: { include: { order_item: true } } }
+            include: { order: { include: { order_item: true } } },
         });
         if (!task)
             throw new Error("Task not found");
-        let mismatch = false;
-        const processingItems = [];
-        for (const inputItem of items) {
-            const originalItem = task.order.order_item.find((oi) => oi.laundry_item_id === inputItem.laundry_item_id);
-            if (!originalItem || originalItem.qty !== inputItem.qty) {
-                mismatch = true;
-            }
-            processingItems.push({
-                station_task_id: taskId,
-                laundry_item_id: inputItem.laundry_item_id,
-                qty: inputItem.qty
-            });
-        }
-        if (items.length !== task.order.order_item.length)
-            mismatch = true;
+        const { mismatch, processingItems } = validateTaskItems(task, items);
         if (mismatch) {
-            await db_1.default.$transaction([
-                db_1.default.station_Task.update({
-                    where: { id: taskId },
-                    data: { status: "NEED_BYPASS" }
-                }),
-                db_1.default.station_Task_Item.createMany({
-                    data: processingItems
-                }),
-            ]);
-            return { code: "MISMATCH", message: "Quantity mismatch. Please request bypass." };
+            return await handleTaskMismatch(taskId, processingItems);
         }
-        await db_1.default.$transaction(async (tx) => {
-            await tx.station_Task.update({
-                where: { id: taskId },
-                data: {
-                    status: "COMPLETED",
-                    finished_at: new Date()
-                }
-            });
-            await tx.station_Task_Item.createMany({
-                data: processingItems
-            });
-            // Determine next station type
-            let nextStationType = null;
-            if (task.task_type === 'WASHING')
-                nextStationType = 'IRONING';
-            else if (task.task_type === 'IRONING')
-                nextStationType = 'PACKING';
-            if (nextStationType) {
-                // Create next task WITHOUT assigning worker (Pool System)
-                await tx.station_Task.create({
-                    data: {
-                        order_id: task.order_id,
-                        task_type: nextStationType,
-                        worker_id: null, // Unassigned - goes to pool
-                        status: "PENDING"
-                    }
-                });
-            }
-            else {
-                // Packing completed - update order status
-                if (task.task_type === 'PACKING') {
-                    const order = await tx.order.findUnique({ where: { id: task.order_id } });
-                    if ((order === null || order === void 0 ? void 0 : order.status) === 'PAID') {
-                        await tx.order.update({ where: { id: task.order_id }, data: { status: 'READY_FOR_DELIVERY' } });
-                    }
-                    else {
-                        await tx.order.update({ where: { id: task.order_id }, data: { status: 'WAITING_PAYMENT' } });
-                    }
-                }
-            }
-        });
-        return { message: "Task processed successfully" };
+        return await completeTaskTransaction(task, processingItems);
     }
     catch (error) {
         throw error;
@@ -188,8 +192,8 @@ const requestBypassService = async (taskId, reason, workerId) => {
                 station_task_id: taskId,
                 outlet_admin_id: outletAdmin.staff_id,
                 reason,
-                status: "PENDING"
-            }
+                status: "PENDING",
+            },
         });
         return { message: "Bypass requested" };
     }

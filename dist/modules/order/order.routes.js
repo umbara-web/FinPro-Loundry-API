@@ -10,4 +10,5 @@ const router = (0, express_1.Router)();
 router.get('/', auth_middleware_1.authMiddleware, auth_middleware_1.verificationGuard, (0, validate_middleware_1.validateQuery)(order_schemas_1.getOrdersSchema), order_controller_1.OrderController.getOrders);
 router.get('/stats', auth_middleware_1.authMiddleware, auth_middleware_1.verificationGuard, order_controller_1.OrderController.getOrderStats);
 router.post('/:orderId/confirm', auth_middleware_1.authMiddleware, auth_middleware_1.verificationGuard, order_controller_1.OrderController.confirmOrder);
+router.get('/:id', auth_middleware_1.authMiddleware, auth_middleware_1.verificationGuard, order_controller_1.OrderController.getOrderById);
 exports.OrderRoutes = router;

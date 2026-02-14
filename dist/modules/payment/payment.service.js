@@ -107,7 +107,7 @@ class PaymentService {
             paymentId: payment.id,
             amount: amount,
             snapToken: 'SIMULATED-SNAP-TOKEN-' + payment.id,
-            redirectUrl: `/dashboard/orders/${order.pickup_request.id}/payment/success`,
+            redirectUrl: `${process.env.BASE_WEB_URL}/dashboard/payments/payment-gateway-mock?orderId=${orderId}&pickupId=${order.pickup_request.id}&paymentId=${payment.id}&amount=${amount}&method=${paymentMethod}`,
         };
     }
     static async handlePaymentWebhook(orderId) {
@@ -126,7 +126,6 @@ class PaymentService {
                 data: {
                     status: 'PAID',
                     paid_at: new Date(),
-                    method: 'GOPAY_SIMULATION',
                 },
             });
         }

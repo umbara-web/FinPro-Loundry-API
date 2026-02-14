@@ -8,7 +8,7 @@ const getStationTasks = async (req, res, next) => {
         const worker_id = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
         if (!worker_id)
             throw new Error("Unauthorized");
-        const stationType = req.query.station || 'WASHING';
+        const stationType = req.query.station || "WASHING";
         const tasks = await (0, worker_service_1.getStationTasksService)(worker_id, stationType);
         res.status(200).send({ data: tasks });
     }

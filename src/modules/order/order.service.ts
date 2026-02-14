@@ -2,20 +2,18 @@ import prisma from '../../configs/db';
 import { Order_Status } from '@prisma/client';
 import { GetOrdersParams } from './order.types';
 import { OrderQueryHelper } from './order.query.helper';
+import { OrderMapper } from './order.mapper';
+import { OrderStatsHelper } from './order.stats.helper';
 
 export class OrderService {
   static async getAllOrders(userId: string, params: GetOrdersParams) {
-    const { page, limit, sortBy, sortOrder } = params;
+    const { page, limit } = params;
     const skip = (page - 1) * limit;
-
     const where = OrderQueryHelper.buildWhereClause(userId, params);
-
-    const orderBy: any = {};
-    if (sortBy) {
-      orderBy[sortBy] = sortOrder || 'desc';
-    } else {
-      orderBy.created_at = 'desc';
-    }
+    const orderBy = OrderQueryHelper.buildOrderBy(
+      params.sortBy,
+      params.sortOrder
+    );
 
     const [total, pickupRequests] = await Promise.all([
       prisma.pickup_Request.count({ where }),
@@ -24,58 +22,12 @@ export class OrderService {
         skip,
         take: limit,
         orderBy,
-        include: {
-          customer_address: true,
-          outlet: true,
-          driver: { select: { id: true, name: true, phone: true } },
-          order: {
-            include: {
-              order_item: {
-                include: {
-                  laundry_item: true,
-                },
-              },
-            },
-          },
-        },
+        include: OrderQueryHelper.getPickupInclude(),
       }),
     ]);
 
-    // Map pickup requests to order format
-    const orders = pickupRequests.map((pickup) => {
-      const orderData = (pickup as any).order?.[0]; // Type assertion might be needed depending on generated types, or just rely on runtime
-
-      return {
-        id: pickup.id,
-        order_id: (pickup as any).order?.[0]?.id || '', // Expose real Order ID
-        pickup_request_id: pickup.id,
-        outlet_id: pickup.assigned_outlet_id,
-        outlet_admin_id: '',
-        total_weight: orderData?.total_weight || 0,
-        price_total: orderData?.price_total || 0,
-        status:
-          orderData?.status ||
-          OrderQueryHelper.mapPickupStatusToOrderStatus(pickup.status),
-        paid_at: null,
-        created_at: pickup.created_at.toISOString(),
-        updated_at: pickup.updated_at.toISOString(),
-        pickup_request: {
-          id: pickup.id,
-          customer_address: {
-            id: pickup.customer_address.id,
-            address: pickup.customer_address.address,
-            city: pickup.customer_address.city,
-            postal_code: pickup.customer_address.postal_code,
-          },
-        },
-        order_item: orderData?.order_item || [],
-        driver_task: pickup.driver ? [{ driver: pickup.driver }] : [],
-        payment: [],
-      };
-    });
-
     return {
-      data: orders,
+      data: OrderMapper.toOrderListResponse(pickupRequests),
       total,
       page,
       limit,
@@ -89,74 +41,25 @@ export class OrderService {
       include: { pickup_request: true },
     });
 
-    if (!order) {
-      throw new Error('Order not found');
-    }
-
-    if (order.pickup_request.customer_id !== userId) {
+    if (!order) throw new Error('Order not found');
+    if (order.pickup_request.customer_id !== userId)
       throw new Error('Forbidden');
-    }
 
-    if (order.status !== 'DELIVERED') {
-      if (order.status === 'COMPLETED') {
-        return order;
-      }
+    if (order.status !== Order_Status.DELIVERED) {
+      if (order.status === Order_Status.COMPLETED) return order;
       throw new Error(
         'Order cannot be confirmed yet. Status must be DELIVERED.'
       );
     }
 
-    const updatedOrder = await prisma.order.update({
+    return prisma.order.update({
       where: { id: orderId },
-      data: {
-        status: 'COMPLETED',
-      },
+      data: { status: Order_Status.COMPLETED },
     });
-
-    return updatedOrder;
   }
 
   static async getOrderStats(userId: string) {
-    const stats = await prisma.pickup_Request.groupBy({
-      by: ['status'],
-      where: {
-        customer_id: userId,
-      },
-      _count: {
-        _all: true,
-      },
-    });
-
-    let ongoing = 0;
-    let delivery = 0;
-    let completed = 0;
-    let cancelled = 0;
-
-    stats.forEach((stat) => {
-      const count = stat._count._all;
-      const status = stat.status;
-
-      if (
-        [
-          'WAITING_DRIVER',
-          'DRIVER_ASSIGNED',
-          'PICKED_UP',
-          'ARRIVED_OUTLET',
-        ].includes(status)
-      ) {
-        ongoing += count;
-      } else if (status === 'CANCELLED') {
-        cancelled += count;
-      }
-    });
-
-    return {
-      all: ongoing + delivery + completed + cancelled,
-      ONGOING: ongoing,
-      DELIVERY: delivery,
-      COMPLETED: completed,
-      CANCELLED: cancelled,
-    };
+    return OrderStatsHelper.getStats(userId);
   }
 
   static async autoConfirmOrders() {
@@ -166,15 +69,24 @@ export class OrderService {
     const result = await prisma.order.updateMany({
       where: {
         status: Order_Status.DELIVERED,
-        updated_at: {
-          lte: twoDaysAgo,
-        },
+        updated_at: { lte: twoDaysAgo },
       },
-      data: {
-        status: Order_Status.COMPLETED,
-      },
+      data: { status: Order_Status.COMPLETED },
     });
 
     return result.count;
+  }
+
+  static async getOrderById(userId: string, orderId: string) {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: OrderQueryHelper.getOrderInclude(),
+    });
+
+    if (!order) throw new Error('Order not found');
+    if ((order as any).pickup_request.customer_id !== userId)
+      throw new Error('Forbidden');
+
+    return OrderMapper.toOrderDetailResponse(order);
   }
 }

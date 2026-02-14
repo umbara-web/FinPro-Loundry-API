@@ -106,7 +106,8 @@ const getDriverHistory = async (req, res, next) => {
             throw new Error("Unauthorized");
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
-        const result = await (0, driver_service_1.getDriverHistoryService)(driver_id, page, limit);
+        const date = req.query.date;
+        const result = await (0, driver_service_1.getDriverHistoryService)(driver_id, page, limit, date);
         res.status(200).send(result);
     }
     catch (error) {

@@ -43,6 +43,22 @@ export class PaymentService {
   }
 
   static async getPaymentStats(userId: string) {
+    // Count orders that have at least one PAID payment
+    const paidOrdersCount = await prisma.order.count({
+      where: {
+        pickup_request: { customer_id: userId },
+        payment: { some: { status: 'PAID' } },
+      },
+    });
+
+    // For other statuses, we can still defer to payment counts or align similarly.
+    // However, given the requirement is likely "Number of Successful Transactions",
+    // matching the order count is the most robust fix.
+
+    // We can also replicate the grouping for PENDING/FAILED if needed,
+    // but let's keep the original grouping for those to minimize disruption,
+    // only overriding the PAID count.
+
     const stats = await prisma.payment.groupBy({
       by: ['status'],
       where: {
@@ -58,7 +74,6 @@ export class PaymentService {
     });
 
     let pending = 0;
-    let paid = 0;
     let failed = 0;
 
     stats.forEach((stat) => {
@@ -67,17 +82,15 @@ export class PaymentService {
 
       if (status === 'PENDING') {
         pending += count;
-      } else if (status === 'PAID') {
-        paid += count;
       } else if (['FAILED', 'EXPIRED', 'REFUNDED'].includes(status)) {
         failed += count;
       }
     });
 
     return {
-      all: pending + paid + failed,
+      all: pending + paidOrdersCount + failed,
       PENDING: pending,
-      PAID: paid,
+      PAID: paidOrdersCount,
       FAILED_GROUP: failed,
     };
   }
@@ -121,11 +134,11 @@ export class PaymentService {
       paymentId: payment.id,
       amount: amount,
       snapToken: 'SIMULATED-SNAP-TOKEN-' + payment.id,
-      redirectUrl: `/dashboard/orders/${order.pickup_request.id}/payment/success`,
+      redirectUrl: `${process.env.BASE_WEB_URL}/dashboard/payments/payment-gateway-mock?orderId=${orderId}&pickupId=${order.pickup_request.id}&paymentId=${payment.id}&amount=${amount}&method=${paymentMethod}`,
     };
   }
 
-  static async handlePaymentWebhook(orderId: string) {
+  static async handlePaymentWebhook(orderId: string, paymentId?: string) {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       include: { payment: true },
@@ -133,17 +146,27 @@ export class PaymentService {
 
     if (!order) throw new Error('Order not found');
 
-    const pendingPayment = await prisma.payment.findFirst({
-      where: { order_id: orderId, status: 'PENDING' },
-    });
+    let pendingPayment;
+    if (paymentId) {
+      pendingPayment = await prisma.payment.findUnique({
+        where: { id: paymentId },
+      });
+      // Safety check: ensure it belongs to the order
+      if (pendingPayment && pendingPayment.order_id !== orderId) {
+        pendingPayment = null;
+      }
+    } else {
+      pendingPayment = await prisma.payment.findFirst({
+        where: { order_id: orderId, status: 'PENDING' },
+      });
+    }
 
-    if (pendingPayment) {
+    if (pendingPayment && pendingPayment.status === 'PENDING') {
       await prisma.payment.update({
         where: { id: pendingPayment.id },
         data: {
           status: 'PAID',
           paid_at: new Date(),
-          method: 'GOPAY_SIMULATION',
         },
       });
     }
@@ -164,6 +187,10 @@ export class PaymentService {
           },
         });
       }
+    } else if (order.status === 'CREATED') {
+      // If order is just created (process starting), mark as PAID or IN_WASHING
+      // Assuming 'PAID' is the safe next state before processing starts
+      updateData.status = 'PAID';
     }
 
     await prisma.order.update({

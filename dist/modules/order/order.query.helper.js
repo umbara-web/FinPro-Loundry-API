@@ -50,6 +50,42 @@ class OrderQueryHelper {
         }
         return where;
     }
+    static buildOrderBy(sortBy, sortOrder) {
+        const orderBy = {};
+        if (sortBy) {
+            orderBy[sortBy] = sortOrder || 'desc';
+        }
+        else {
+            orderBy.created_at = 'desc';
+        }
+        return orderBy;
+    }
+    static getPickupInclude() {
+        return {
+            customer_address: true,
+            outlet: true,
+            driver: { select: { id: true, name: true, phone: true } },
+            order: {
+                include: {
+                    order_item: { include: { laundry_item: true } },
+                    payment: true,
+                },
+            },
+        };
+    }
+    static getOrderInclude() {
+        return {
+            pickup_request: {
+                include: {
+                    customer_address: true,
+                    outlet: true,
+                    driver: { select: { id: true, name: true, phone: true } },
+                },
+            },
+            order_item: { include: { laundry_item: true } },
+            payment: true,
+        };
+    }
     static mapPickupStatusToOrderStatus(pickupStatus) {
         const statusMapping = {
             WAITING_DRIVER: 'CREATED',

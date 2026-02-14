@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, Response, NextFunction } from 'express';
 import {
   getStationTasksService,
   processTaskService,
@@ -6,7 +6,7 @@ import {
   getWorkerHistoryService,
   claimTaskService,
   getTaskDetailService,
-} from "../services/worker.service";
+} from '../services/worker.service';
 
 export const getStationTasks = async (
   req: Request,
@@ -15,9 +15,9 @@ export const getStationTasks = async (
 ) => {
   try {
     const worker_id = req.user?.userId;
-    if (!worker_id) throw new Error("Unauthorized");
+    if (!worker_id) throw new Error('Unauthorized');
 
-    const stationType = (req.query.station as string) || "WASHING";
+    const stationType = (req.query.station as string) || 'WASHING';
     const tasks = await getStationTasksService(worker_id, stationType);
     res.status(200).send({ data: tasks });
   } catch (error) {
@@ -33,7 +33,7 @@ export const claimTask = async (
   try {
     const { taskId } = req.params;
     const workerId = req.user?.userId;
-    if (!workerId) throw new Error("Unauthorized");
+    if (!workerId) throw new Error('Unauthorized');
 
     const result = await claimTaskService(taskId, workerId);
     res.status(200).send(result);
@@ -51,11 +51,11 @@ export const processTask = async (
     const { taskId } = req.params;
     const { items } = req.body;
     const userId = req.user?.userId;
-    if (!userId) throw new Error("Unauthorized");
+    if (!userId) throw new Error('Unauthorized');
 
     const result = await processTaskService(taskId, items, userId);
 
-    if (result.code === "MISMATCH") {
+    if (result.code === 'MISMATCH') {
       res.status(400).send(result);
     } else {
       res.status(200).send(result);
@@ -74,7 +74,7 @@ export const requestBypass = async (
     const { taskId } = req.params;
     const { reason, items } = req.body;
     const userId = req.user?.userId;
-    if (!userId) throw new Error("Unauthorized");
+    if (!userId) throw new Error('Unauthorized');
 
     const result = await requestBypassService(taskId, reason, userId, items);
     res.status(200).send(result);
@@ -90,7 +90,7 @@ export const getWorkerHistory = async (
 ) => {
   try {
     const workerId = req.user?.userId;
-    if (!workerId) throw new Error("Unauthorized");
+    if (!workerId) throw new Error('Unauthorized');
 
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
@@ -121,7 +121,7 @@ export const getTaskDetail = async (
     const { taskId } = req.params;
     const workerId = req.user?.userId;
 
-    if (!workerId) throw new Error("Unauthorized");
+    if (!workerId) throw new Error('Unauthorized');
 
     const result = await getTaskDetailService(taskId, workerId);
     res.status(200).send(result);

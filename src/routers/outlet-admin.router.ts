@@ -1,16 +1,16 @@
-import { Router } from "express";
-import { getAttendanceReportController } from "../controllers/outlet-admin.controller";
+import { Router } from 'express';
+import { getAttendanceReportController } from '../controllers/outlet-admin.controller';
 import {
   authMiddleware,
   roleGuard,
-} from "../common/middlewares/auth.middleware";
+} from '../common/middlewares/auth.middleware';
 
 const router = Router();
 
 router.get(
-  "/attendance-report",
+  '/attendance-report',
   authMiddleware,
-  roleGuard(["OUTLET_ADMIN"]),
+  roleGuard(['OUTLET_ADMIN']),
   getAttendanceReportController,
 );
 

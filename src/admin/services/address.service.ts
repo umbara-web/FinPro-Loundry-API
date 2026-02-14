@@ -1,50 +1,49 @@
 import { prisma } from '../lib/prisma';
-import { Address, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 export const getAddresses = async (userId?: string) => {
-  const where: Prisma.AddressWhereInput = userId ? { userId } : {};
-  return await prisma.address.findMany({
+  const where: Prisma.Customer_AddressWhereInput = userId ? { customer_id: userId } : {};
+  return await prisma.customer_Address.findMany({
     where,
-    orderBy: { createdAt: 'desc' },
+    orderBy: { created_at: 'desc' },
   });
 };
 
 export const getAddressById = async (id: string) => {
-  return await prisma.address.findUnique({
+  return await prisma.customer_Address.findUnique({
     where: { id },
   });
 };
 
-export const createAddress = async (data: Prisma.AddressUncheckedCreateInput) => {
-  // If this is set to primary, update others to false
-  if (data.isPrimary && data.userId) {
-    await prisma.address.updateMany({
-      where: { userId: data.userId },
-      data: { isPrimary: false },
+export const createAddress = async (data: Prisma.Customer_AddressUncheckedCreateInput) => {
+  if (data.is_primary && data.customer_id) {
+    await prisma.customer_Address.updateMany({
+      where: { customer_id: data.customer_id },
+      data: { is_primary: false },
     });
   }
 
-  return await prisma.address.create({
+  return await prisma.customer_Address.create({
     data,
   });
 };
 
-export const updateAddress = async (id: string, data: Prisma.AddressUncheckedUpdateInput) => {
-  if (data.isPrimary === true && typeof data.userId === 'string') {
-    await prisma.address.updateMany({
-      where: { userId: data.userId, id: { not: id } },
-      data: { isPrimary: false },
+export const updateAddress = async (id: string, data: Prisma.Customer_AddressUncheckedUpdateInput) => {
+  if (data.is_primary === true && typeof data.customer_id === 'string') {
+    await prisma.customer_Address.updateMany({
+      where: { customer_id: data.customer_id, id: { not: id } },
+      data: { is_primary: false },
     });
   }
 
-  return await prisma.address.update({
+  return await prisma.customer_Address.update({
     where: { id },
     data,
   });
 };
 
 export const deleteAddress = async (id: string) => {
-  return await prisma.address.delete({
+  return await prisma.customer_Address.delete({
     where: { id },
   });
 };

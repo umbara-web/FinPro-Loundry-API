@@ -3,7 +3,7 @@ import * as addressService from '../services/address.service';
 
 export const getAddresses = async (req: Request, res: Response) => {
     try {
-        // For now, we accept userId as a query param or assume it comes from auth middleware later
+
         const userId = req.query.userId as string;
         const addresses = await addressService.getAddresses(userId);
         res.json(addresses);

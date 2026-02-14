@@ -1,9 +1,9 @@
 import { prisma } from '../lib/prisma';
-import { Prisma } from '@prisma/client';
+import { Prisma, OutletStatus } from '@prisma/client';
 
 export const getOutlets = async () => {
     return await prisma.outlet.findMany({
-        orderBy: { createdAt: 'desc' },
+        orderBy: { created_at: 'desc' },
     });
 };
 
@@ -27,7 +27,11 @@ export const updateOutlet = async (id: string, data: Prisma.OutletUpdateInput) =
 };
 
 export const deleteOutlet = async (id: string) => {
-    return await prisma.outlet.delete({
+    const existing = await prisma.outlet.findUnique({ where: { id } });
+    if (!existing) return null;
+
+    return await prisma.outlet.update({
         where: { id },
+        data: { status: OutletStatus.CLOSED },
     });
 };

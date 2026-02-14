@@ -7,18 +7,14 @@ exports.OrderService = void 0;
 const db_1 = __importDefault(require("../../configs/db"));
 const client_1 = require("@prisma/client");
 const order_query_helper_1 = require("./order.query.helper");
+const order_mapper_1 = require("./order.mapper");
+const order_stats_helper_1 = require("./order.stats.helper");
 class OrderService {
     static async getAllOrders(userId, params) {
-        const { page, limit, sortBy, sortOrder } = params;
+        const { page, limit } = params;
         const skip = (page - 1) * limit;
         const where = order_query_helper_1.OrderQueryHelper.buildWhereClause(userId, params);
-        const orderBy = {};
-        if (sortBy) {
-            orderBy[sortBy] = sortOrder || 'desc';
-        }
-        else {
-            orderBy.created_at = 'desc';
-        }
+        const orderBy = order_query_helper_1.OrderQueryHelper.buildOrderBy(params.sortBy, params.sortOrder);
         const [total, pickupRequests] = await Promise.all([
             db_1.default.pickup_Request.count({ where }),
             db_1.default.pickup_Request.findMany({
@@ -26,55 +22,11 @@ class OrderService {
                 skip,
                 take: limit,
                 orderBy,
-                include: {
-                    customer_address: true,
-                    outlet: true,
-                    driver: { select: { id: true, name: true, phone: true } },
-                    order: {
-                        include: {
-                            order_item: {
-                                include: {
-                                    laundry_item: true,
-                                },
-                            },
-                        },
-                    },
-                },
+                include: order_query_helper_1.OrderQueryHelper.getPickupInclude(),
             }),
         ]);
-        // Map pickup requests to order format
-        const orders = pickupRequests.map((pickup) => {
-            var _a, _b, _c;
-            const orderData = (_a = pickup.order) === null || _a === void 0 ? void 0 : _a[0]; // Type assertion might be needed depending on generated types, or just rely on runtime
-            return {
-                id: pickup.id,
-                order_id: ((_c = (_b = pickup.order) === null || _b === void 0 ? void 0 : _b[0]) === null || _c === void 0 ? void 0 : _c.id) || '', // Expose real Order ID
-                pickup_request_id: pickup.id,
-                outlet_id: pickup.assigned_outlet_id,
-                outlet_admin_id: '',
-                total_weight: (orderData === null || orderData === void 0 ? void 0 : orderData.total_weight) || 0,
-                price_total: (orderData === null || orderData === void 0 ? void 0 : orderData.price_total) || 0,
-                status: (orderData === null || orderData === void 0 ? void 0 : orderData.status) ||
-                    order_query_helper_1.OrderQueryHelper.mapPickupStatusToOrderStatus(pickup.status),
-                paid_at: null,
-                created_at: pickup.created_at.toISOString(),
-                updated_at: pickup.updated_at.toISOString(),
-                pickup_request: {
-                    id: pickup.id,
-                    customer_address: {
-                        id: pickup.customer_address.id,
-                        address: pickup.customer_address.address,
-                        city: pickup.customer_address.city,
-                        postal_code: pickup.customer_address.postal_code,
-                    },
-                },
-                order_item: (orderData === null || orderData === void 0 ? void 0 : orderData.order_item) || [],
-                driver_task: pickup.driver ? [{ driver: pickup.driver }] : [],
-                payment: [],
-            };
-        });
         return {
-            data: orders,
+            data: order_mapper_1.OrderMapper.toOrderListResponse(pickupRequests),
             total,
             page,
             limit,
@@ -86,62 +38,22 @@ class OrderService {
             where: { id: orderId },
             include: { pickup_request: true },
         });
-        if (!order) {
+        if (!order)
             throw new Error('Order not found');
-        }
-        if (order.pickup_request.customer_id !== userId) {
+        if (order.pickup_request.customer_id !== userId)
             throw new Error('Forbidden');
-        }
         if (order.status !== 'DELIVERED') {
-            if (order.status === 'COMPLETED') {
+            if (order.status === 'COMPLETED')
                 return order;
-            }
             throw new Error('Order cannot be confirmed yet. Status must be DELIVERED.');
         }
-        const updatedOrder = await db_1.default.order.update({
+        return db_1.default.order.update({
             where: { id: orderId },
-            data: {
-                status: 'COMPLETED',
-            },
+            data: { status: 'COMPLETED' },
         });
-        return updatedOrder;
     }
     static async getOrderStats(userId) {
-        const stats = await db_1.default.pickup_Request.groupBy({
-            by: ['status'],
-            where: {
-                customer_id: userId,
-            },
-            _count: {
-                _all: true,
-            },
-        });
-        let ongoing = 0;
-        let delivery = 0;
-        let completed = 0;
-        let cancelled = 0;
-        stats.forEach((stat) => {
-            const count = stat._count._all;
-            const status = stat.status;
-            if ([
-                'WAITING_DRIVER',
-                'DRIVER_ASSIGNED',
-                'PICKED_UP',
-                'ARRIVED_OUTLET',
-            ].includes(status)) {
-                ongoing += count;
-            }
-            else if (status === 'CANCELLED') {
-                cancelled += count;
-            }
-        });
-        return {
-            all: ongoing + delivery + completed + cancelled,
-            ONGOING: ongoing,
-            DELIVERY: delivery,
-            COMPLETED: completed,
-            CANCELLED: cancelled,
-        };
+        return order_stats_helper_1.OrderStatsHelper.getStats(userId);
     }
     static async autoConfirmOrders() {
         const twoDaysAgo = new Date();
@@ -149,15 +61,22 @@ class OrderService {
         const result = await db_1.default.order.updateMany({
             where: {
                 status: client_1.Order_Status.DELIVERED,
-                updated_at: {
-                    lte: twoDaysAgo,
-                },
+                updated_at: { lte: twoDaysAgo },
             },
-            data: {
-                status: client_1.Order_Status.COMPLETED,
-            },
+            data: { status: client_1.Order_Status.COMPLETED },
         });
         return result.count;
+    }
+    static async getOrderById(userId, orderId) {
+        const order = await db_1.default.order.findUnique({
+            where: { id: orderId },
+            include: order_query_helper_1.OrderQueryHelper.getOrderInclude(),
+        });
+        if (!order)
+            throw new Error('Order not found');
+        if (order.pickup_request.customer_id !== userId)
+            throw new Error('Forbidden');
+        return order_mapper_1.OrderMapper.toOrderDetailResponse(order);
     }
 }
 exports.OrderService = OrderService;

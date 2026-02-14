@@ -74,13 +74,13 @@ export async function createPayment(
   } catch (error: any) {
     // Basic error handling mapping
     if (error.message === 'Order not found') {
-      return res.status(404).json({ error: error.message });
+      return res.status(404).json({ message: error.message });
     }
     if (error.message === 'Forbidden') {
-      return res.status(403).json({ error: error.message });
+      return res.status(403).json({ message: error.message });
     }
     if (error.message === 'Order already paid') {
-      return res.status(400).json({ error: error.message });
+      return res.status(400).json({ message: error.message });
     }
     next(error);
   }
@@ -92,8 +92,11 @@ export async function handlePaymentWebhook(
   next: NextFunction
 ) {
   try {
-    const { orderId } = req.body;
-    const result = await PaymentService.handlePaymentWebhook(orderId);
+    const { orderId, paymentId } = req.body;
+    const result = await PaymentService.handlePaymentWebhook(
+      orderId,
+      paymentId
+    );
     res.json(result);
   } catch (error: any) {
     if (error.message === 'Order not found') {

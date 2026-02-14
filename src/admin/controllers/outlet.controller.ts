@@ -46,9 +46,11 @@ export const updateOutlet = async (req: Request, res: Response) => {
 export const deleteOutlet = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        await outletService.deleteOutlet(id);
-        res.status(204).send();
+        const result = await outletService.deleteOutlet(id);
+        if (!result) return res.status(404).json({ error: 'Outlet not found' });
+        res.json(result);
     } catch (error) {
+        console.error('deleteOutlet error:', error);
         res.status(500).json({ error: 'Failed to delete outlet' });
     }
 };

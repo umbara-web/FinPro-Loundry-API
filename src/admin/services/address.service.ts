@@ -1,5 +1,5 @@
 import { prisma } from '../lib/prisma';
-import { Customer_Address, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 export const getAddresses = async (userId?: string) => {
   const where: Prisma.Customer_AddressWhereInput = userId ? { customer_id: userId } : {};

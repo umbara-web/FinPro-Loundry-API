@@ -1,13 +1,26 @@
 import { prisma } from '../lib/prisma';
-import { Prisma } from '@prisma/client';
+import { Prisma, ItemCategory, ItemStatus } from '@prisma/client';
 
-export const getItems = async (search?: string) => {
-    const where: Prisma.Laundry_ItemWhereInput = search ? {
-        OR: [
-            { name: { contains: search, mode: 'insensitive' } },
-            { id: { contains: search, mode: 'insensitive' } },
-        ]
-    } : {};
+export const getItems = async (search?: string, category?: string, status?: string) => {
+    const conditions: Prisma.Laundry_ItemWhereInput[] = [];
+
+    if (search) {
+        conditions.push({
+            OR: [
+                { name: { contains: search, mode: 'insensitive' } },
+                { id: { contains: search, mode: 'insensitive' } },
+            ],
+        });
+    }
+    if (category && category !== 'Semua Kategori') {
+        conditions.push({ category: category as ItemCategory });
+    }
+    if (status && status !== 'Semua Status') {
+        conditions.push({ status: status as ItemStatus });
+    }
+
+    const where: Prisma.Laundry_ItemWhereInput =
+        conditions.length > 0 ? { AND: conditions } : {};
 
     return await prisma.laundry_Item.findMany({
         where,

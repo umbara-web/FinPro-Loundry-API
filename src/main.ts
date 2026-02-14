@@ -14,6 +14,7 @@ import outletRouter from './admin/router/outlet.router';
 import workerRouter from './admin/router/worker.router';
 import orderRouter from './admin/router/order.router';
 import { prisma } from './admin/lib/prisma';
+import { authenticateJWT, requireSuperAdmin } from './admin/middleware/auth.middleware';
 
 
 const app = express();
@@ -54,9 +55,8 @@ dotenv.config();
 
 
 
-// Middleware - CORS harus diletakkan sebelum middleware lainnya
 app.use(cors({
-  origin: true, // Allow all origins (untuk development), bisa diubah ke array spesifik untuk production
+  origin: true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
@@ -66,11 +66,10 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
-// Body parser middleware - dengan limit yang lebih besar dan error handling
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Middleware untuk logging request (untuk debugging)
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
   if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
@@ -79,19 +78,17 @@ app.use((req, res, next) => {
   next();
 });
 
-// Routes
-app.use('/api/addresses', addressRouter);
-app.use('/api/items', itemRouter);
-app.use('/api/outlets', outletRouter);
-app.use('/api/workers', workerRouter);
-app.use('/api/orders', orderRouter);
 
-// Health check
+app.use('/api/addresses', authenticateJWT, requireSuperAdmin, addressRouter);
+app.use('/api/items', authenticateJWT, requireSuperAdmin, itemRouter);
+app.use('/api/outlets', authenticateJWT, requireSuperAdmin, outletRouter);
+app.use('/api/workers', authenticateJWT, requireSuperAdmin, workerRouter);
+app.use('/api/orders', authenticateJWT, requireSuperAdmin, orderRouter);
+
 app.get('/', (req, res) => {
   res.json({ message: 'Server is running' });
 });
 
-// Error handling middleware untuk JSON parsing errors
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   if (err instanceof SyntaxError && 'body' in err) {
     console.error('JSON parsing error:', err);
@@ -107,10 +104,10 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   });
 });
 
-// Test database connection on startup
+
 async function startServer() {
   try {
-    // Test Prisma connection
+
     await prisma.$connect();
     console.log('✅ Database connected successfully');
   } catch (error) {
@@ -125,4 +122,3 @@ async function startServer() {
 }
 
 startServer();
-

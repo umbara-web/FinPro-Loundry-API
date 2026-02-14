@@ -155,12 +155,18 @@ model Outlet {
 
   name String
   address String
-  lat String
-  long String
-  service_radius Int
+  city String @default("")
+  manager String @default("")
+  phone String @default("") 
+  lat String @default("0")
+  long String @default("0")
+  service_radius Int @default(0)
+  openTime  String?       // e.g., "08:00 - 21:00"
+  status    OutletStatus @default(ACTIVE)
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
+  
 
   staff Staff[]
   shift Shift[]
@@ -241,6 +247,11 @@ model Laundry_Item {
   id String @id @default(uuid())
 
   name String
+  category  ItemCategory
+  price     Int
+  unit      ItemUnit
+  status    ItemStatus   @default(ACTIVE)
+  imageUrl  String?
 
   order_item Order_Item[]
   station_task_item Station_Task_Item[]
@@ -299,6 +310,9 @@ model Order_Item {
 
   order_id String
   laundry_item_id String
+  itemName  String
+  price     Int
+  unit      String
 
   order Order @relation(fields: [order_id], references: [id])
   laundry_item Laundry_Item @relation(fields: [laundry_item_id], references: [id])
@@ -428,4 +442,27 @@ model ComplaintMessage {
 
   @@index([complaint_id])
   @@index([sender_id])
+}
+
+enum OutletStatus {
+  ACTIVE
+  CLOSED
+  RENOVATION
+}
+
+enum ItemCategory {
+  CUCI_SETRIKA
+  SATUAN
+  DRY_CLEAN
+}
+
+enum ItemUnit {
+  KG
+  PCS
+  M2
+}
+
+enum ItemStatus {
+  ACTIVE
+  INACTIVE
 }

@@ -3,9 +3,17 @@ import * as workerService from '../services/worker.service';
 
 export const getWorkers = async (req: Request, res: Response) => {
     try {
-        const workers = await workerService.getWorkers();
-        res.json(workers);
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 5;
+        const search = req.query.search as string || '';
+        const role = req.query.role as string || '';
+        const status = req.query.status as string || '';
+
+        const result = await workerService.getWorkers({ page, limit, search, role, status });
+
+        res.json(result);
     } catch (error) {
+        console.error('Error fetching workers:', error);
         res.status(500).json({ error: 'Failed to fetch workers' });
     }
 };
@@ -27,9 +35,20 @@ export const createWorker = async (req: Request, res: Response) => {
     try {
         const worker = await workerService.createWorker(req.body);
         res.status(201).json(worker);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Failed to create worker' });
+    } catch (error: any) {
+        console.error('Error creating worker:', error);
+
+        if (error.code === 'P2002' && error.meta?.target?.includes('email')) {
+            return res.status(409).json({
+                error: 'Gagal menambahkan worker',
+                details: 'Email sudah terdaftar. Gunakan email lain.'
+            });
+        }
+
+        res.status(500).json({
+            error: 'Failed to create worker',
+            details: error.message || 'Unknown error'
+        });
     }
 };
 
@@ -38,8 +57,12 @@ export const updateWorker = async (req: Request, res: Response) => {
         const { id } = req.params;
         const worker = await workerService.updateWorker(id, req.body);
         res.json(worker);
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to update worker' });
+    } catch (error: any) {
+        console.error('Error updating worker:', error);
+        res.status(500).json({
+            error: 'Failed to update worker',
+            details: error.message || 'Unknown error'
+        });
     }
 };
 
@@ -48,7 +71,11 @@ export const deleteWorker = async (req: Request, res: Response) => {
         const { id } = req.params;
         await workerService.deleteWorker(id);
         res.status(204).send();
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to delete worker' });
+    } catch (error: any) {
+        console.error('Error deleting worker:', error);
+        res.status(500).json({
+            error: 'Failed to delete worker',
+            details: error.message || 'Unknown error'
+        });
     }
 };

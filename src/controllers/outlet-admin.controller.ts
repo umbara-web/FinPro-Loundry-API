@@ -4,7 +4,9 @@ import {
   getBypassRequestsService,
   handleBypassRequestService,
   getDashboardStatsService,
+  processOrderService,
 } from '../services/outlet-admin.service';
+import { ProcessOrderPayload } from '../modules/order/order.types';
 import prisma from '../configs/db';
 
 export const getAttendanceReportController = async (
@@ -139,6 +141,40 @@ export const getDashboardStats = async (
       message: 'Dashboard stats fetched successfully',
       data: stats,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const processOrderController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = (req.user as any)?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const { id } = req.params; // orderId
+    const payload: ProcessOrderPayload = req.body;
+
+    const staffRecord = await prisma.staff.findFirst({
+      where: { staff_id: userId, staff_type: 'OUTLET_ADMIN' },
+    });
+
+    if (!staffRecord) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    const result = await processOrderService(
+      staffRecord.outlet_id,
+      id,
+      payload
+    );
+
+    res.status(200).json(result);
   } catch (error) {
     next(error);
   }

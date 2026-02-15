@@ -1,5 +1,6 @@
 import prisma from '../configs/db';
-import { Staff_Type, Order_Status } from '@prisma/client';
+import { Staff_Type, Order_Status, Station_Task_Type } from '@prisma/client';
+import { ProcessOrderPayload } from '../modules/order/order.types';
 
 interface AttendanceReportParams {
   outletId: string;
@@ -339,4 +340,78 @@ export const getDashboardStatsService = async (outletId: string) => {
     inProgress,
     ready,
   };
+};
+
+export const processOrderService = async (
+  outletId: string,
+  orderId: string,
+  payload: ProcessOrderPayload
+) => {
+  const { items, totalWeight } = payload;
+
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: {
+      pickup_request: true,
+      order_item: true,
+    },
+  });
+
+  if (!order) throw new Error('Order not found');
+
+
+  if (order.status !== Order_Status.CREATED) {
+    // Allow processing even if status is not strictly CREATED, but it should be in a state before washing.
+    if (
+      order.status === Order_Status.IN_WASHING ||
+      order.status === Order_Status.COMPLETED
+    ) {
+      throw new Error('Order already processed');
+    }
+  }
+
+  return await prisma.$transaction(async (tx) => {
+    // Update Order Items
+    for (const item of items) {
+      const existingItem = order.order_item.find(
+        (oi) => oi.laundry_item_id === item.laundry_item_id
+      );
+
+      if (existingItem) {
+        if (existingItem.qty !== item.qty) {
+          await tx.order_Item.update({
+            where: { id: existingItem.id },
+            data: { qty: item.qty },
+          });
+        }
+      }
+    }
+
+    // Calculate Price
+    const basePricePerKg = 6000;
+    const priceTotal = Math.floor(totalWeight * basePricePerKg); // No rounding to 100 for now, straightforward math
+
+    // Update Order
+    await tx.order.update({
+      where: { id: orderId },
+      data: {
+        total_weight: totalWeight,
+        price_total: priceTotal,
+        status: Order_Status.IN_WASHING,
+      },
+    });
+
+    // Create Washing Task
+    await tx.station_Task.create({
+      data: {
+        order_id: orderId,
+        task_type: Station_Task_Type.WASHING,
+        status: 'PENDING',
+      },
+    });
+
+    const staffName = 'Outlet Admin'; // We might want to pass this down if needed for logs
+
+    return { message: 'Order processed successfully' };
+  });
 };

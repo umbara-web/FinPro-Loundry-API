@@ -32,12 +32,25 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteOrder = exports.updateOrder = exports.createOrder = exports.getOrderById = exports.getAllOrders = void 0;
 const orderService = __importStar(require("../services/order.service"));
+const db_1 = __importDefault(require("../../configs/db"));
 const getAllOrders = async (req, res) => {
     try {
-        const orders = await orderService.getAllOrders();
+        const user = req.user;
+        let { outletId } = req.query;
+        // If Outlet Admin, resolve outlet_id from Staff table
+        if (user.role === 'OUTLET_ADMIN') {
+            const staffRecord = await db_1.default.staff.findFirst({
+                where: { staff_id: user.userId, staff_type: 'OUTLET_ADMIN' },
+            });
+            outletId = (staffRecord === null || staffRecord === void 0 ? void 0 : staffRecord.outlet_id) || undefined;
+        }
+        const orders = await orderService.getAllOrders(outletId);
         res.json(orders);
     }
     catch (error) {

@@ -37,10 +37,21 @@ exports.deleteWorker = exports.updateWorker = exports.createWorker = exports.get
 const workerService = __importStar(require("../services/worker.service"));
 const getWorkers = async (req, res) => {
     try {
-        const workers = await workerService.getWorkers();
-        res.json(workers);
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 5;
+        const search = req.query.search || '';
+        const role = req.query.role || '';
+        const status = req.query.status || '';
+        const user = req.user;
+        let outletId;
+        if (user.role === 'OUTLET_ADMIN') {
+            outletId = user.outlet_id;
+        }
+        const result = await workerService.getWorkers({ page, limit, search, role, status, outletId });
+        res.json(result);
     }
     catch (error) {
+        console.error('Error fetching workers:', error);
         res.status(500).json({ error: 'Failed to fetch workers' });
     }
 };
@@ -60,13 +71,23 @@ const getWorkerById = async (req, res) => {
 };
 exports.getWorkerById = getWorkerById;
 const createWorker = async (req, res) => {
+    var _a, _b;
     try {
         const worker = await workerService.createWorker(req.body);
         res.status(201).json(worker);
     }
     catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Failed to create worker' });
+        console.error('Error creating worker:', error);
+        if (error.code === 'P2002' && ((_b = (_a = error.meta) === null || _a === void 0 ? void 0 : _a.target) === null || _b === void 0 ? void 0 : _b.includes('email'))) {
+            return res.status(409).json({
+                error: 'Gagal menambahkan worker',
+                details: 'Email sudah terdaftar. Gunakan email lain.'
+            });
+        }
+        res.status(500).json({
+            error: 'Failed to create worker',
+            details: error.message || 'Unknown error'
+        });
     }
 };
 exports.createWorker = createWorker;
@@ -77,7 +98,11 @@ const updateWorker = async (req, res) => {
         res.json(worker);
     }
     catch (error) {
-        res.status(500).json({ error: 'Failed to update worker' });
+        console.error('Error updating worker:', error);
+        res.status(500).json({
+            error: 'Failed to update worker',
+            details: error.message || 'Unknown error'
+        });
     }
 };
 exports.updateWorker = updateWorker;
@@ -88,7 +113,11 @@ const deleteWorker = async (req, res) => {
         res.status(204).send();
     }
     catch (error) {
-        res.status(500).json({ error: 'Failed to delete worker' });
+        console.error('Error deleting worker:', error);
+        res.status(500).json({
+            error: 'Failed to delete worker',
+            details: error.message || 'Unknown error'
+        });
     }
 };
 exports.deleteWorker = deleteWorker;

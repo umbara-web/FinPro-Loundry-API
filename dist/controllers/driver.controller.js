@@ -7,7 +7,7 @@ const getAvailablePickups = async (req, res, next) => {
     try {
         const driver_id = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
         if (!driver_id)
-            throw new Error("Unauthorized");
+            throw new Error('Unauthorized');
         const result = await (0, driver_service_1.getAvailablePickupsService)(driver_id);
         res.status(200).send({ data: result });
     }
@@ -21,7 +21,7 @@ const acceptPickup = async (req, res, next) => {
     try {
         const driver_id = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
         if (!driver_id)
-            throw new Error("Unauthorized");
+            throw new Error('Unauthorized');
         const { requestId } = req.params;
         const result = await (0, driver_service_1.acceptPickupService)(driver_id, requestId);
         res.status(200).send(result);
@@ -48,7 +48,7 @@ const getAvailableDeliveries = async (req, res, next) => {
     try {
         const driver_id = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
         if (!driver_id)
-            throw new Error("Unauthorized");
+            throw new Error('Unauthorized');
         const result = await (0, driver_service_1.getAvailableDeliveriesService)(driver_id);
         res.status(200).send({ data: result });
     }
@@ -62,7 +62,7 @@ const acceptDelivery = async (req, res, next) => {
     try {
         const driver_id = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
         if (!driver_id)
-            throw new Error("Unauthorized");
+            throw new Error('Unauthorized');
         const { orderId } = req.params;
         const result = await (0, driver_service_1.acceptDeliveryService)(driver_id, orderId);
         res.status(200).send(result);
@@ -89,7 +89,7 @@ const getActiveJob = async (req, res, next) => {
     try {
         const driver_id = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
         if (!driver_id)
-            throw new Error("Unauthorized");
+            throw new Error('Unauthorized');
         const result = await (0, driver_service_1.getActiveJobService)(driver_id);
         res.status(200).send({ data: result });
     }
@@ -103,7 +103,7 @@ const getDriverHistory = async (req, res, next) => {
     try {
         const driver_id = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
         if (!driver_id)
-            throw new Error("Unauthorized");
+            throw new Error('Unauthorized');
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const date = req.query.date;
@@ -120,7 +120,7 @@ const getPickupById = async (req, res, next) => {
     try {
         const driver_id = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
         if (!driver_id)
-            throw new Error("Unauthorized");
+            throw new Error('Unauthorized');
         const { pickupId } = req.params;
         const result = await (0, driver_service_1.getPickupByIdService)(driver_id, pickupId);
         res.status(200).send({ data: result });
@@ -135,7 +135,7 @@ const getDeliveryById = async (req, res, next) => {
     try {
         const driver_id = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
         if (!driver_id)
-            throw new Error("Unauthorized");
+            throw new Error('Unauthorized');
         const { taskId } = req.params;
         const result = await (0, driver_service_1.getDeliveryByIdService)(driver_id, taskId);
         res.status(200).send({ data: result });

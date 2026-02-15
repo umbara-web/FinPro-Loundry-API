@@ -42,6 +42,19 @@ class PaymentService {
         };
     }
     static async getPaymentStats(userId) {
+        // Count orders that have at least one PAID payment
+        const paidOrdersCount = await db_1.default.order.count({
+            where: {
+                pickup_request: { customer_id: userId },
+                payment: { some: { status: 'PAID' } },
+            },
+        });
+        // For other statuses, we can still defer to payment counts or align similarly.
+        // However, given the requirement is likely "Number of Successful Transactions",
+        // matching the order count is the most robust fix.
+        // We can also replicate the grouping for PENDING/FAILED if needed,
+        // but let's keep the original grouping for those to minimize disruption,
+        // only overriding the PAID count.
         const stats = await db_1.default.payment.groupBy({
             by: ['status'],
             where: {
@@ -56,7 +69,6 @@ class PaymentService {
             },
         });
         let pending = 0;
-        let paid = 0;
         let failed = 0;
         stats.forEach((stat) => {
             const count = stat._count._all;
@@ -64,24 +76,25 @@ class PaymentService {
             if (status === 'PENDING') {
                 pending += count;
             }
-            else if (status === 'PAID') {
-                paid += count;
-            }
             else if (['FAILED', 'EXPIRED', 'REFUNDED'].includes(status)) {
                 failed += count;
             }
         });
         return {
-            all: pending + paid + failed,
+            all: pending + paidOrdersCount + failed,
             PENDING: pending,
-            PAID: paid,
+            PAID: paidOrdersCount,
             FAILED_GROUP: failed,
         };
     }
     static async createPayment(userId, orderId, paymentMethod) {
         const order = await db_1.default.order.findUnique({
             where: { id: orderId },
-            include: { pickup_request: true, payment: true },
+            include: {
+                pickup_request: true,
+                payment: true,
+                order_item: { include: { laundry_item: true } },
+            },
         });
         if (!order) {
             throw new Error('Order not found');
@@ -93,7 +106,15 @@ class PaymentService {
         if (successPayment || order.paid_at) {
             throw new Error('Order already paid');
         }
-        const amount = order.price_total;
+        // Calculate amount from order items if price_total is 0
+        let amount = order.price_total;
+        if (amount === 0 && order.order_item.length > 0) {
+            amount = order.order_item.reduce((sum, item) => {
+                var _a;
+                const unitPrice = item.price || ((_a = item.laundry_item) === null || _a === void 0 ? void 0 : _a.price) || 0;
+                return sum + unitPrice * item.qty;
+            }, 0);
+        }
         const payment = await db_1.default.payment.create({
             data: {
                 order_id: orderId,
@@ -110,17 +131,29 @@ class PaymentService {
             redirectUrl: `${process.env.BASE_WEB_URL}/dashboard/payments/payment-gateway-mock?orderId=${orderId}&pickupId=${order.pickup_request.id}&paymentId=${payment.id}&amount=${amount}&method=${paymentMethod}`,
         };
     }
-    static async handlePaymentWebhook(orderId) {
+    static async handlePaymentWebhook(orderId, paymentId) {
         const order = await db_1.default.order.findUnique({
             where: { id: orderId },
             include: { payment: true },
         });
         if (!order)
             throw new Error('Order not found');
-        const pendingPayment = await db_1.default.payment.findFirst({
-            where: { order_id: orderId, status: 'PENDING' },
-        });
-        if (pendingPayment) {
+        let pendingPayment;
+        if (paymentId) {
+            pendingPayment = await db_1.default.payment.findUnique({
+                where: { id: paymentId },
+            });
+            // Safety check: ensure it belongs to the order
+            if (pendingPayment && pendingPayment.order_id !== orderId) {
+                pendingPayment = null;
+            }
+        }
+        else {
+            pendingPayment = await db_1.default.payment.findFirst({
+                where: { order_id: orderId, status: 'PENDING' },
+            });
+        }
+        if (pendingPayment && pendingPayment.status === 'PENDING') {
             await db_1.default.payment.update({
                 where: { id: pendingPayment.id },
                 data: {
@@ -143,6 +176,11 @@ class PaymentService {
                     },
                 });
             }
+        }
+        else if (order.status === 'CREATED') {
+            // If order is just created (process starting), mark as PAID or IN_WASHING
+            // Assuming 'PAID' is the safe next state before processing starts
+            updateData.status = 'PAID';
         }
         await db_1.default.order.update({
             where: { id: orderId },

@@ -61,12 +61,19 @@ const getOutletById = async (req, res) => {
 exports.getOutletById = getOutletById;
 const createOutlet = async (req, res) => {
     try {
+        console.log('Creating outlet with data:', req.body);
         const outlet = await outletService.createOutlet(req.body);
         res.status(201).json(outlet);
     }
     catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Failed to create outlet' });
+        console.error('createOutlet error:', error);
+        const errorMessage = error.message || 'Unknown error';
+        res.status(500).json({
+            error: 'Failed to create outlet',
+            details: errorMessage,
+            // Include Prisma error info if available
+            prismaError: error.code ? { code: error.code, meta: error.meta } : undefined
+        });
     }
 };
 exports.createOutlet = createOutlet;
@@ -85,9 +92,10 @@ const deleteOutlet = async (req, res) => {
     try {
         const { id } = req.params;
         await outletService.deleteOutlet(id);
-        res.status(204).send();
+        res.status(200).json({ message: 'Outlet deleted successfully' });
     }
     catch (error) {
+        console.error('deleteOutlet error:', error);
         res.status(500).json({ error: 'Failed to delete outlet' });
     }
 };

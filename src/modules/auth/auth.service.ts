@@ -129,9 +129,20 @@ export async function socialLogin(data: { email: string; name: string }) {
 }
 
 export async function getMe(userId: string) {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      staff: {
+        select: { outlet_id: true },
+        take: 1,
+      },
+    },
+  });
   if (!user) throw createCustomError(404, 'User not found');
 
-  const { password, ...userWithoutPassword } = user;
-  return userWithoutPassword;
+  const { password, staff, ...userWithoutPassword } = user;
+  return {
+    ...userWithoutPassword,
+    outlet_id: staff?.[0]?.outlet_id || null,
+  };
 }

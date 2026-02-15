@@ -13,6 +13,13 @@ export const getAllOrders = async (outletId?: string) => {
             },
             outlet: true,
             outlet_admin: true,
+            station_task: {
+                include: {
+                    worker: true
+                },
+                orderBy: { started_at: 'desc' },
+                take: 1
+            },
             order_item: {
                 include: {
                     laundry_item: true,

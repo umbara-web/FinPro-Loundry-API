@@ -3,6 +3,7 @@ import {
   getAttendanceReportController,
   getBypassRequests,
   handleBypassRequest,
+  getDashboardStats,
 } from '../controllers/outlet-admin.controller';
 import {
   authMiddleware,
@@ -15,7 +16,7 @@ router.get(
   '/attendance-report',
   authMiddleware,
   roleGuard(['OUTLET_ADMIN']),
-  getAttendanceReportController,
+  getAttendanceReportController
 );
 
 router.get(
@@ -30,6 +31,13 @@ router.patch(
   authMiddleware,
   roleGuard(['OUTLET_ADMIN']),
   handleBypassRequest
+);
+
+router.get(
+  '/dashboard-stats',
+  authMiddleware,
+  roleGuard(['OUTLET_ADMIN']),
+  getDashboardStats
 );
 
 export const OutletAdminRoutes = router;

@@ -1,7 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'secret';
+import { SECRET_KEY } from '../../configs/env.config';
+
+// Removed: const JWT_SECRET = process.env.JWT_SECRET || 'secret';
 
 export interface AuthPayload {
   id: string;
@@ -10,19 +12,29 @@ export interface AuthPayload {
 }
 
 export const authenticateJWT = (req: Request, res: Response, next: NextFunction) => {
+  if (req.method === 'OPTIONS') {
+    return next();
+  }
+
   const authHeader = req.headers.authorization || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+  let token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+
+  if (!token && req.cookies && req.cookies['auth_token']) {
+    token = req.cookies['auth_token'];
+  }
 
   if (!token) {
     return res.status(401).json({ error: 'Unauthorized: token missing' });
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as AuthPayload;
+    const decoded = jwt.verify(token, SECRET_KEY) as AuthPayload;
+    console.log('Admin Auth Middleware - Decoded User:', JSON.stringify(decoded, null, 2)); // Debug log
     (req as any).user = decoded;
     next();
   } catch (err) {
-    console.error('JWT verification failed:', err);
+    console.error('Admin Auth Middleware - JWT verification failed:', err);
+    console.error('Token used:', token.substring(0, 10) + '...'); // Log partial token safely
     return res.status(401).json({ error: 'Unauthorized: invalid token' });
   }
 };

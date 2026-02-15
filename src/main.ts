@@ -81,9 +81,9 @@ app.use((req, res, next) => {
 
 app.use('/api/addresses', authenticateJWT, requireSuperAdmin, addressRouter);
 app.use('/api/items', authenticateJWT, requireSuperAdmin, itemRouter);
-app.use('/api/outlets', authenticateJWT, requireSuperAdmin, outletRouter);
-app.use('/api/workers', authenticateJWT, requireSuperAdmin, workerRouter);
-app.use('/api/orders', authenticateJWT, requireSuperAdmin, orderRouter);
+app.use('/api/outlets', authenticateJWT, outletRouter);
+app.use('/api/workers', authenticateJWT, workerRouter);
+app.use('/api/orders', authenticateJWT, orderRouter);
 
 app.get('/', (req, res) => {
   res.json({ message: 'Server is running' });
@@ -121,4 +121,5 @@ async function startServer() {
   });
 }
 
+// Force restart for CORS fix again
 startServer();

@@ -9,7 +9,14 @@ export const getWorkers = async (req: Request, res: Response) => {
         const role = req.query.role as string || '';
         const status = req.query.status as string || '';
 
-        const result = await workerService.getWorkers({ page, limit, search, role, status });
+        const user = (req as any).user;
+        let outletId: string | undefined;
+
+        if (user.role === 'OUTLET_ADMIN') {
+            outletId = user.outlet_id;
+        }
+
+        const result = await workerService.getWorkers({ page, limit, search, role, status, outletId });
 
         res.json(result);
     } catch (error) {

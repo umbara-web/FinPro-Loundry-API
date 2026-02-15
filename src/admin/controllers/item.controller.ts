@@ -55,7 +55,7 @@ export const createItem = async (req: Request, res: Response) => {
 
         const data = {
             name: rawData.name,
-            price: parseInt(rawData.price, 10),
+            price: rawData.price ? parseInt(rawData.price, 10) : 0,
             category: mapCategory(rawData.category),
             unit: mapUnit(rawData.unit),
             status: mapStatus(rawData.status),

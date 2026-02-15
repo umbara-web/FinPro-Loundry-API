@@ -3,7 +3,14 @@ import * as orderService from '../services/order.service';
 
 export const getAllOrders = async (req: Request, res: Response) => {
     try {
-        const { outletId } = req.query;
+        const user = (req as any).user;
+        let { outletId } = req.query;
+
+        // If Outlet Admin, enforce their outlet ID
+        if (user.role === 'OUTLET_ADMIN') {
+            outletId = user.outlet_id;
+        }
+
         const orders = await orderService.getAllOrders(outletId as string);
         res.json(orders);
     } catch (error) {

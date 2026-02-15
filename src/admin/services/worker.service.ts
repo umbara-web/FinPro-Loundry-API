@@ -8,10 +8,11 @@ interface GetWorkersParams {
     search?: string;
     role?: string;
     status?: string;
+    outletId?: string;
 }
 
 export const getWorkers = async (params: GetWorkersParams) => {
-    const { page, limit, search, role, status } = params;
+    const { page, limit, search, role, status, outletId } = params;
     const skip = (page - 1) * limit;
 
     const where: Prisma.StaffWhereInput = {
@@ -24,6 +25,9 @@ export const getWorkers = async (params: GetWorkersParams) => {
             } : {},
             role && role !== 'Semua Role' ? {
                 staff_type: role as Staff_Type
+            } : {},
+            outletId ? {
+                outlet_id: outletId
             } : {},
         ]
     };

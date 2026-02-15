@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.OrderQueryHelper = void 0;
+const client_1 = require("@prisma/client");
 class OrderQueryHelper {
     static buildWhereClause(userId, params) {
         const where = {
@@ -68,7 +69,7 @@ class OrderQueryHelper {
             order: {
                 include: {
                     order_item: { include: { laundry_item: true } },
-                    payment: true,
+                    payment: { orderBy: { created_at: client_1.Prisma.SortOrder.desc } },
                 },
             },
         };
@@ -83,7 +84,7 @@ class OrderQueryHelper {
                 },
             },
             order_item: { include: { laundry_item: true } },
-            payment: true,
+            payment: { orderBy: { created_at: client_1.Prisma.SortOrder.desc } },
         };
     }
     static mapPickupStatusToOrderStatus(pickupStatus) {

@@ -12,9 +12,9 @@ const clockInService = async (staff_id) => {
             include: { shift: true, outlet: true },
         });
         if (!staff)
-            throw new Error("Staff profile not found");
+            throw new Error('Staff profile not found');
         if (!staff.shift) {
-            throw new Error("No shift assigned to this staff");
+            throw new Error('No shift assigned to this staff');
         }
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -27,7 +27,7 @@ const clockInService = async (staff_id) => {
             },
         });
         if (existingAttendance) {
-            throw new Error("Already clocked in today");
+            throw new Error('Already clocked in today');
         }
         const currentShift = staff.shift;
         await db_1.default.attendance.create({
@@ -35,10 +35,10 @@ const clockInService = async (staff_id) => {
                 staff_id,
                 outlet_id: staff.outlet_id,
                 shift_id: currentShift.id,
-                status: "PRESENT",
+                status: 'PRESENT',
             },
         });
-        return { message: "Clock in successful" };
+        return { message: 'Clock in successful' };
     }
     catch (error) {
         throw error;
@@ -57,13 +57,13 @@ const clockOutService = async (staff_id) => {
             },
         });
         if (!attendance) {
-            throw new Error("No active check-in found for today");
+            throw new Error('No active check-in found for today');
         }
         await db_1.default.attendance.update({
             where: { id: attendance.id },
             data: { check_out_at: new Date() },
         });
-        return { message: "Clock out successful" };
+        return { message: 'Clock out successful' };
     }
     catch (error) {
         throw error;
@@ -74,7 +74,7 @@ const getHistoryService = async (staff_id) => {
     try {
         return await db_1.default.attendance.findMany({
             where: { staff_id },
-            orderBy: { check_in_at: "desc" },
+            orderBy: { check_in_at: 'desc' },
             take: 30,
             include: { outlet: true },
         });
@@ -125,12 +125,12 @@ const getStatusService = async (staff_id) => {
             checkOutTime,
             weeklyHours: Math.round(weeklyHours * 10) / 10,
             overtime: Math.max(0, Math.round((weeklyHours - 40) * 10) / 10),
-            station: ((_a = staff === null || staff === void 0 ? void 0 : staff.outlet) === null || _a === void 0 ? void 0 : _a.name) || "Unknown",
+            station: ((_a = staff === null || staff === void 0 ? void 0 : staff.outlet) === null || _a === void 0 ? void 0 : _a.name) || 'Unknown',
             staffName: staff_id,
             lastShiftEnd: checkOutTime,
-            shiftName: ((_b = staff === null || staff === void 0 ? void 0 : staff.shift) === null || _b === void 0 ? void 0 : _b.name) || "No Shift Assigned",
-            shiftStart: ((_c = staff === null || staff === void 0 ? void 0 : staff.shift) === null || _c === void 0 ? void 0 : _c.start_time) || "--:--",
-            shiftEnd: ((_d = staff === null || staff === void 0 ? void 0 : staff.shift) === null || _d === void 0 ? void 0 : _d.end_time) || "--:--",
+            shiftName: ((_b = staff === null || staff === void 0 ? void 0 : staff.shift) === null || _b === void 0 ? void 0 : _b.name) || 'No Shift Assigned',
+            shiftStart: ((_c = staff === null || staff === void 0 ? void 0 : staff.shift) === null || _c === void 0 ? void 0 : _c.start_time) || '--:--',
+            shiftEnd: ((_d = staff === null || staff === void 0 ? void 0 : staff.shift) === null || _d === void 0 ? void 0 : _d.end_time) || '--:--',
         };
     }
     catch (error) {

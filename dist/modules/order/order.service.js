@@ -42,14 +42,14 @@ class OrderService {
             throw new Error('Order not found');
         if (order.pickup_request.customer_id !== userId)
             throw new Error('Forbidden');
-        if (order.status !== 'DELIVERED') {
-            if (order.status === 'COMPLETED')
+        if (order.status !== client_1.Order_Status.DELIVERED) {
+            if (order.status === client_1.Order_Status.COMPLETED)
                 return order;
             throw new Error('Order cannot be confirmed yet. Status must be DELIVERED.');
         }
         return db_1.default.order.update({
             where: { id: orderId },
-            data: { status: 'COMPLETED' },
+            data: { status: client_1.Order_Status.COMPLETED },
         });
     }
     static async getOrderStats(userId) {

@@ -37,7 +37,6 @@ exports.deleteAddress = exports.updateAddress = exports.createAddress = exports.
 const addressService = __importStar(require("../services/address.service"));
 const getAddresses = async (req, res) => {
     try {
-        // For now, we accept userId as a query param or assume it comes from auth middleware later
         const userId = req.query.userId;
         const addresses = await addressService.getAddresses(userId);
         res.json(addresses);

@@ -118,9 +118,18 @@ async function socialLogin(data) {
     return buildLoginResponse(user);
 }
 async function getMe(userId) {
-    const user = await db_1.default.user.findUnique({ where: { id: userId } });
+    var _a;
+    const user = await db_1.default.user.findUnique({
+        where: { id: userId },
+        include: {
+            staff: {
+                select: { outlet_id: true },
+                take: 1,
+            },
+        },
+    });
     if (!user)
         throw (0, customError_1.createCustomError)(404, 'User not found');
-    const { password } = user, userWithoutPassword = __rest(user, ["password"]);
-    return userWithoutPassword;
+    const { password, staff } = user, userWithoutPassword = __rest(user, ["password", "staff"]);
+    return Object.assign(Object.assign({}, userWithoutPassword), { outlet_id: ((_a = staff === null || staff === void 0 ? void 0 : staff[0]) === null || _a === void 0 ? void 0 : _a.outlet_id) || null });
 }

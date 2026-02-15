@@ -73,8 +73,8 @@ async function createPayment(req, res, next) {
 }
 async function handlePaymentWebhook(req, res, next) {
     try {
-        const { orderId } = req.body;
-        const result = await payment_service_1.PaymentService.handlePaymentWebhook(orderId);
+        const { orderId, paymentId } = req.body;
+        const result = await payment_service_1.PaymentService.handlePaymentWebhook(orderId, paymentId);
         res.json(result);
     }
     catch (error) {

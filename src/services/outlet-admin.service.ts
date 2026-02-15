@@ -1,5 +1,5 @@
 import prisma from '../configs/db';
-import { Staff_Type } from '@prisma/client';
+import { Staff_Type, Order_Status } from '@prisma/client';
 
 interface AttendanceReportParams {
   outletId: string;
@@ -262,4 +262,81 @@ export const handleBypassRequestService = async (
   } catch (error) {
     throw error;
   }
+};
+
+export const getDashboardStatsService = async (outletId: string) => {
+  const now = new Date();
+  const startOfToday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate()
+  );
+  const startOfYesterday = new Date(startOfToday);
+  startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+
+  const [ordersToday, ordersYesterday, pending, inProgress, ready] =
+    await Promise.all([
+      // Orders created today
+      prisma.order.count({
+        where: {
+          outlet_id: outletId,
+          created_at: { gte: startOfToday },
+        },
+      }),
+      // Orders created yesterday (for trend)
+      prisma.order.count({
+        where: {
+          outlet_id: outletId,
+          created_at: { gte: startOfYesterday, lt: startOfToday },
+        },
+      }),
+      // Pending orders
+      prisma.order.count({
+        where: {
+          outlet_id: outletId,
+          status: Order_Status.CREATED,
+        },
+      }),
+      // In progress orders
+      prisma.order.count({
+        where: {
+          outlet_id: outletId,
+          status: {
+            in: [
+              Order_Status.IN_WASHING,
+              Order_Status.IN_IRONING,
+              Order_Status.IN_PACKING,
+            ],
+          },
+        },
+      }),
+      // Ready orders
+      prisma.order.count({
+        where: {
+          outlet_id: outletId,
+          status: {
+            in: [Order_Status.READY_FOR_DELIVERY, Order_Status.ON_DELIVERY],
+          },
+        },
+      }),
+    ]);
+
+  // Calculate trend
+  let trend: string | null = null;
+  if (ordersYesterday > 0) {
+    const change = Math.round(
+      ((ordersToday - ordersYesterday) / ordersYesterday) * 100
+    );
+    trend = `${change >= 0 ? '+' : ''}${change}% from yesterday`;
+  } else if (ordersToday > 0) {
+    trend = '+100% from yesterday';
+  }
+
+  return {
+    ordersToday,
+    trend,
+    pending,
+    inProgress,
+    ready,
+  };
 };

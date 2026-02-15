@@ -25,11 +25,18 @@ export const getOutletById = async (req: Request, res: Response) => {
 
 export const createOutlet = async (req: Request, res: Response) => {
     try {
+        console.log('Creating outlet with data:', req.body);
         const outlet = await outletService.createOutlet(req.body);
         res.status(201).json(outlet);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Failed to create outlet' });
+    } catch (error: any) {
+        console.error('createOutlet error:', error);
+        const errorMessage = error.message || 'Unknown error';
+        res.status(500).json({ 
+            error: 'Failed to create outlet', 
+            details: errorMessage,
+            // Include Prisma error info if available
+            prismaError: error.code ? { code: error.code, meta: error.meta } : undefined
+        });
     }
 };
 

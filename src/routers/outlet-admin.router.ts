@@ -1,5 +1,9 @@
 import { Router } from 'express';
-import { getAttendanceReportController } from '../controllers/outlet-admin.controller';
+import {
+  getAttendanceReportController,
+  getBypassRequests,
+  handleBypassRequest,
+} from '../controllers/outlet-admin.controller';
 import {
   authMiddleware,
   roleGuard,
@@ -12,6 +16,20 @@ router.get(
   authMiddleware,
   roleGuard(['OUTLET_ADMIN']),
   getAttendanceReportController,
+);
+
+router.get(
+  '/bypass-requests',
+  authMiddleware,
+  roleGuard(['OUTLET_ADMIN']),
+  getBypassRequests
+);
+
+router.patch(
+  '/bypass-requests/:requestId',
+  authMiddleware,
+  roleGuard(['OUTLET_ADMIN']),
+  handleBypassRequest
 );
 
 export const OutletAdminRoutes = router;

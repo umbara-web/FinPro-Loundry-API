@@ -11,6 +11,12 @@ class OrderMapper {
         if (status === 'CREATED' && mappedStatus !== 'CREATED') {
             status = mappedStatus;
         }
+        // Check if there is a successful payment
+        const payments = (orderData === null || orderData === void 0 ? void 0 : orderData.payment) || [];
+        const isPaid = payments.some((p) => p.status === 'PAID');
+        if (isPaid && (status === 'CREATED' || status === 'WAITING_PAYMENT')) {
+            status = 'PAID';
+        }
         return {
             id: pickup.id,
             order_id: ((_c = (_b = pickup.order) === null || _b === void 0 ? void 0 : _b[0]) === null || _c === void 0 ? void 0 : _c.id) || '',
@@ -49,7 +55,15 @@ class OrderMapper {
             outlet_admin_id: '',
             total_weight: order.total_weight,
             price_total: order.price_total,
-            status: order.status,
+            status: (() => {
+                const payments = order.payment || [];
+                const isPaid = payments.some((p) => p.status === 'PAID');
+                if (isPaid &&
+                    (order.status === 'CREATED' || order.status === 'WAITING_PAYMENT')) {
+                    return 'PAID';
+                }
+                return order.status;
+            })(),
             paid_at: order.paid_at,
             created_at: order.created_at,
             updated_at: order.updated_at,

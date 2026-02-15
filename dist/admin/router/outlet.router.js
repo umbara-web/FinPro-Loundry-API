@@ -36,9 +36,19 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const outletController = __importStar(require("../controllers/outlet.controller"));
 const router = (0, express_1.Router)();
-router.get('/', outletController.getOutlets);
+// Allow both SUPER_ADMIN and OUTLET_ADMIN to manage outlets
+const requireAdminRole = (req, res, next) => {
+    const user = req.user;
+    if (!user)
+        return res.status(401).json({ error: 'Unauthorized' });
+    if (user.role !== 'SUPER_ADMIN' && user.role !== 'OUTLET_ADMIN') {
+        return res.status(403).json({ error: 'Forbidden: insufficient permissions' });
+    }
+    next();
+};
+router.get('/', requireAdminRole, outletController.getOutlets);
 router.get('/:id', outletController.getOutletById);
-router.post('/', outletController.createOutlet);
-router.put('/:id', outletController.updateOutlet);
-router.delete('/:id', outletController.deleteOutlet);
+router.post('/', requireAdminRole, outletController.createOutlet);
+router.put('/:id', requireAdminRole, outletController.updateOutlet);
+router.delete('/:id', requireAdminRole, outletController.deleteOutlet);
 exports.default = router;

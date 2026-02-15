@@ -70,13 +70,27 @@ function createPickupInDb(data, assignedOutletId) {
                 price_total: 0, // Initial 0
                 status: 'CREATED',
             };
-            // Only add order items if they exist
             if (data.items && data.items.length > 0) {
+                const laundryItemIds = [...new Set(data.items.map((i) => i.laundryItemId))];
+                const laundryItems = await tx.laundry_Item.findMany({
+                    where: { id: { in: laundryItemIds } },
+                    select: { id: true, name: true, price: true, unit: true },
+                });
+                const itemMap = new Map(laundryItems.map((li) => [li.id, li]));
                 orderData.order_item = {
-                    create: data.items.map((item) => ({
-                        laundry_item_id: item.laundryItemId,
-                        qty: item.qty,
-                    })),
+                    create: data.items.map((item) => {
+                        const laundryItem = itemMap.get(item.laundryItemId);
+                        if (!laundryItem) {
+                            throw (0, customError_1.createCustomError)(400, `Laundry item not found: ${item.laundryItemId}`);
+                        }
+                        return {
+                            laundry_item_id: item.laundryItemId,
+                            itemName: laundryItem.name,
+                            price: laundryItem.price,
+                            unit: laundryItem.unit,
+                            qty: item.qty,
+                        };
+                    }),
                 };
             }
             await tx.order.create({ data: orderData });
@@ -84,6 +98,7 @@ function createPickupInDb(data, assignedOutletId) {
         return pickup;
     });
 }
+;
 async function getPickupRequestsByCustomer(customerId) {
     return db_1.default.pickup_Request.findMany({
         where: { customer_id: customerId },

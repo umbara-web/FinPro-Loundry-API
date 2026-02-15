@@ -24,5 +24,5 @@ const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || '';
 exports.CLOUDINARY_CLOUD_NAME = CLOUDINARY_CLOUD_NAME;
 const GMAIL_EMAIL = process.env.GMAIL_EMAIL || '';
 exports.GMAIL_EMAIL = GMAIL_EMAIL;
-const GMAIL_APP_PASS = process.env.GMAIL_APP_PASS || '';
+const GMAIL_APP_PASS = (process.env.GMAIL_APP_PASS || '').replace(/\s/g, '');
 exports.GMAIL_APP_PASS = GMAIL_APP_PASS;

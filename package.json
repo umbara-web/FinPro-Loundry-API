@@ -4,7 +4,8 @@
   "description": "",
   "main": "./src/main.ts",
   "scripts": {
-    "build": "tsc",
+    "postinstall": "prisma generate",
+    "build": "tsc && copyfiles -u 1 src/templates/*/ dist/",
     "start": "npm run build && node dist/main.js",
     "dev": "nodemon",
     "test": "echo \"Error: no test specified\" && exit 1",

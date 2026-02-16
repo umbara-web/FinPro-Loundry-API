@@ -30,7 +30,7 @@ const app = (0, express_1.default)();
 const SERVER_PORT = env_config_1.PORT || 8000;
 // --- Global Middleware ---
 app.use((0, helmet_1.default)({
-    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 app.use((0, cors_1.default)({
     origin: env_config_1.BASE_WEB_URL || 'http://localhost:3000', // Fallback to localhost
@@ -47,7 +47,7 @@ app.use((req, res, next) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
     if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
         // CAUTION: Avoid logging sensitive data in production
-        // console.log('Request body:', req.body); 
+        // console.log('Request body:', req.body);
     }
     next();
 });

@@ -1,6 +1,6 @@
 import 'dotenv/config';
 
-const PORT = process.env.PORT || 8000;
+const PORT = process.env.PORT || 3000;
 let BASE_WEB_URL = process.env.BASE_WEB_URL || 'http://localhost:3000';
 
 // Force HTTP for localhost to avoid SSL errors

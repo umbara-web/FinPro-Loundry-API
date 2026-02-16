@@ -9,5 +9,4 @@ router.get('/attendance-report', auth_middleware_1.authMiddleware, (0, auth_midd
 router.get('/bypass-requests', auth_middleware_1.authMiddleware, (0, auth_middleware_1.roleGuard)(['OUTLET_ADMIN']), outlet_admin_controller_1.getBypassRequests);
 router.patch('/bypass-requests/:requestId', auth_middleware_1.authMiddleware, (0, auth_middleware_1.roleGuard)(['OUTLET_ADMIN']), outlet_admin_controller_1.handleBypassRequest);
 router.get('/dashboard-stats', auth_middleware_1.authMiddleware, (0, auth_middleware_1.roleGuard)(['OUTLET_ADMIN']), outlet_admin_controller_1.getDashboardStats);
-router.post('/orders/:id/process', auth_middleware_1.authMiddleware, (0, auth_middleware_1.roleGuard)(['OUTLET_ADMIN']), outlet_admin_controller_1.processOrderController);
 exports.OutletAdminRoutes = router;

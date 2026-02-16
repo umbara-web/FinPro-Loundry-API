@@ -74,7 +74,7 @@ app.use('/api/admin/orders', authenticateJWT, orderRouter); // Renamed to avoid 
 
 // 2. Generic API Router
 // Handles other modules like /auth, /users, etc.
-app.use('/api', router);
+app.use('/', router);
 
 // 3. Root Endpoint
 app.get('/', (req, res) => {

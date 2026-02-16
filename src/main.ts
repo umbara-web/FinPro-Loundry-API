@@ -8,7 +8,7 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 
-import { PORT, BASE_WEB_URL } from './configs/env.config';
+import { PORT, NEXT_PUBLIC_WEB_URL } from './configs/env.config';
 import { prisma } from './admin/lib/prisma';
 import { logger } from './lib/logger';
 
@@ -43,7 +43,7 @@ app.use(
 
 app.use(
   cors({
-    origin: BASE_WEB_URL || 'http://localhost:3000', // Fallback to localhost
+    origin: ['http://localhost:3000', 'https://finpro-laundry-web.vercel.app'], // Fallback to localhost
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],

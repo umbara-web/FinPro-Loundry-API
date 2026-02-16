@@ -43,7 +43,7 @@ app.use(
 
 app.use(
   cors({
-    origin: ['http://localhost:3000', 'https://finpro-laundry-web.vercel.app'], // Fallback to localhost
+    origin: NEXT_PUBLIC_WEB_URL || 'http://localhost:3000', // Fallback to localhost
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],

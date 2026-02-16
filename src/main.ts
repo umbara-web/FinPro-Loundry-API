@@ -8,13 +8,16 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 
-import { PORT, BASE_WEB_URL } from './configs/env.config';
+import { PORT, NEXT_PUBLIC_WEB_URL } from './configs/env.config';
 import { prisma } from './admin/lib/prisma';
 import { logger } from './lib/logger';
 
 // Middlewares
 import errorMiddleware from './common/middlewares/error.middleware';
-import { authenticateJWT, requireSuperAdmin } from './admin/middleware/auth.middleware';
+import {
+  authenticateJWT,
+  requireSuperAdmin,
+} from './admin/middleware/auth.middleware';
 
 // Routers
 import router from './routes'; // Generic /api routers
@@ -34,13 +37,13 @@ const SERVER_PORT = PORT || 8000;
 
 app.use(
   helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
   })
 );
 
 app.use(
   cors({
-    origin: BASE_WEB_URL || 'http://localhost:3000', // Fallback to localhost
+    origin: NEXT_PUBLIC_WEB_URL || 'http://localhost:3000', // Fallback to localhost
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
@@ -57,7 +60,7 @@ app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
   if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
     // CAUTION: Avoid logging sensitive data in production
-    // console.log('Request body:', req.body); 
+    // console.log('Request body:', req.body);
   }
   next();
 });
@@ -106,9 +109,10 @@ async function startServer() {
     app.listen(SERVER_PORT, () => {
       logger.info(`🚀 Server is running on port ${SERVER_PORT}`);
       console.log(`📡 API endpoint: http://localhost:${SERVER_PORT}/api`);
-      console.log(`📡 Admin endpoint: http://localhost:${SERVER_PORT}/api/admin/orders`);
+      console.log(
+        `📡 Admin endpoint: http://localhost:${SERVER_PORT}/api/admin/orders`
+      );
     });
-
   } catch (error) {
     console.error('❌ Database connection failed:', error);
     console.error('Please check your DATABASE_URL in .env file');

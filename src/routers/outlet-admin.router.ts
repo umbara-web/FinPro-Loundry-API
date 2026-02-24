@@ -4,6 +4,7 @@ import {
   getBypassRequests,
   handleBypassRequest,
   getDashboardStats,
+  processOrderController,
 } from '../controllers/outlet-admin.controller';
 import {
   authMiddleware,
@@ -38,6 +39,13 @@ router.get(
   authMiddleware,
   roleGuard(['OUTLET_ADMIN']),
   getDashboardStats
+);
+
+router.post(
+  '/orders/:id/process',
+  authMiddleware,
+  roleGuard(['OUTLET_ADMIN']),
+  processOrderController
 );
 
 export const OutletAdminRoutes = router;

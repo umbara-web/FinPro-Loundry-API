@@ -1,6 +1,6 @@
 import prisma from '../../configs/db';
 import { createCustomError } from '../../common/utils/customError';
-import { BASE_WEB_URL } from '../../configs/env.config';
+import { NEXT_PUBLIC_WEB_URL } from '../../configs/env.config';
 import {
   sendVerificationEmail,
   sendResetPasswordEmail,
@@ -18,7 +18,7 @@ export async function generateAndSendVerification(user: {
 }) {
   const token = generateToken({ userId: user.id, email: user.email }, '1h');
   await prisma.registerToken.create({ data: { token } });
-  const verificationLink = `${BASE_WEB_URL}/auth/verify-email?token=${token}`;
+  const verificationLink = `${NEXT_PUBLIC_WEB_URL}/auth/verify-email?token=${token}`;
   await sendVerificationEmail(user.email, user.name, verificationLink);
 }
 
@@ -36,7 +36,7 @@ export async function requestResetPassword(data: { email: string }) {
   const token = generateToken({ userId: user.id }, '1h');
   await prisma.registerToken.create({ data: { token } });
 
-  const resetLink = `${BASE_WEB_URL}/auth/reset-password/confirm/${token}`;
+  const resetLink = `${NEXT_PUBLIC_WEB_URL}/auth/reset-password/confirm/${token}`;
   await sendResetPasswordEmail(user.email, user.name, resetLink);
 
   return { message: 'Reset password email sent' };
@@ -74,7 +74,7 @@ export async function resendVerification(email: string) {
   const token = generateToken({ userId: user.id, email: user.email }, '1h');
   await prisma.registerToken.create({ data: { token } });
 
-  const verificationLink = `${BASE_WEB_URL}/auth/verify-email?token=${token}`;
+  const verificationLink = `${NEXT_PUBLIC_WEB_URL}/auth/verify-email?token=${token}`;
   await sendVerificationEmail(user.email, user.name, verificationLink);
 
   return { message: 'Email verifikasi telah dikirim ulang' };

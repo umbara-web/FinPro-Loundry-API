@@ -4,6 +4,7 @@
   "description": "",
   "main": "./src/main.ts",
   "scripts": {
+    "postinstall": "prisma generate",
     "build": "tsc",
     "start": "npm run build && node dist/main.js",
     "dev": "nodemon",

@@ -33,7 +33,7 @@ app.use((0, helmet_1.default)({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 app.use((0, cors_1.default)({
-    origin: env_config_1.BASE_WEB_URL || 'http://localhost:3000', // Fallback to localhost
+    origin: env_config_1.NEXT_PUBLIC_WEB_URL || 'http://localhost:3000', // Fallback to localhost
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
@@ -61,7 +61,7 @@ app.use('/api/workers', auth_middleware_1.authenticateJWT, worker_router_1.defau
 app.use('/api/admin/orders', auth_middleware_1.authenticateJWT, order_router_1.default); // Renamed to avoid collision
 // 2. Generic API Router
 // Handles other modules like /auth, /users, etc.
-app.use('/api', routes_1.default);
+app.use('/', routes_1.default);
 // 3. Root Endpoint
 app.get('/', (req, res) => {
     res.json({ message: 'Server is running', service: 'FinnPro Laundry API' });
@@ -84,8 +84,8 @@ async function startServer() {
         console.log('⏰ Order cron job initialized');
         app.listen(SERVER_PORT, () => {
             logger_1.logger.info(`🚀 Server is running on port ${SERVER_PORT}`);
-            console.log(`📡 API endpoint: http://localhost:${SERVER_PORT}/api`);
-            console.log(`📡 Admin endpoint: http://localhost:${SERVER_PORT}/api/admin/orders`);
+            console.log(`📡 API endpoint: http://localhost:${SERVER_PORT}/api/`);
+            console.log(`📡 Admin endpoint: http://localhost:${SERVER_PORT}/api/admin`);
         });
     }
     catch (error) {

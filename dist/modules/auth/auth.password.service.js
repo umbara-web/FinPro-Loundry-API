@@ -15,7 +15,7 @@ const token_helper_1 = require("../../common/utils/token.helper");
 async function generateAndSendVerification(user) {
     const token = (0, token_helper_1.generateToken)({ userId: user.id, email: user.email }, '1h');
     await db_1.default.registerToken.create({ data: { token } });
-    const verificationLink = `${env_config_1.BASE_WEB_URL}/auth/verify-email?token=${token}`;
+    const verificationLink = `${env_config_1.NEXT_PUBLIC_WEB_URL}/auth/verify-email?token=${token}`;
     await (0, email_helper_1.sendVerificationEmail)(user.email, user.name, verificationLink);
 }
 async function requestResetPassword(data) {
@@ -27,7 +27,7 @@ async function requestResetPassword(data) {
     }
     const token = (0, token_helper_1.generateToken)({ userId: user.id }, '1h');
     await db_1.default.registerToken.create({ data: { token } });
-    const resetLink = `${env_config_1.BASE_WEB_URL}/auth/reset-password/confirm/${token}`;
+    const resetLink = `${env_config_1.NEXT_PUBLIC_WEB_URL}/auth/reset-password/confirm/${token}`;
     await (0, email_helper_1.sendResetPasswordEmail)(user.email, user.name, resetLink);
     return { message: 'Reset password email sent' };
 }
@@ -55,7 +55,7 @@ async function resendVerification(email) {
     }
     const token = (0, token_helper_1.generateToken)({ userId: user.id, email: user.email }, '1h');
     await db_1.default.registerToken.create({ data: { token } });
-    const verificationLink = `${env_config_1.BASE_WEB_URL}/auth/verify-email?token=${token}`;
+    const verificationLink = `${env_config_1.NEXT_PUBLIC_WEB_URL}/auth/verify-email?token=${token}`;
     await (0, email_helper_1.sendVerificationEmail)(user.email, user.name, verificationLink);
     return { message: 'Email verifikasi telah dikirim ulang' };
 }

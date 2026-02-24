@@ -45,10 +45,8 @@ const updateItem = async (id, data) => {
 exports.updateItem = updateItem;
 const deleteItem = async (id) => {
     return await prisma_1.prisma.$transaction(async (tx) => {
-        // Delete related records first to avoid foreign key constraints
         await tx.station_Task_Item.deleteMany({ where: { laundry_item_id: id } });
         await tx.order_Item.deleteMany({ where: { laundry_item_id: id } });
-        // Then delete the item itself
         return await tx.laundry_Item.delete({ where: { id } });
     });
 };

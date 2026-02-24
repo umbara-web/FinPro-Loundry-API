@@ -3,7 +3,7 @@ import * as outletController from '../controllers/outlet.controller';
 
 const router = Router();
 
-// Allow both SUPER_ADMIN and OUTLET_ADMIN to manage outlets
+
 const requireAdminRole = (req: Request, res: Response, next: NextFunction) => {
     const user = (req as any).user;
     if (!user) return res.status(401).json({ error: 'Unauthorized' });

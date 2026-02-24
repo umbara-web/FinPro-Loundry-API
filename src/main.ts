@@ -105,8 +105,8 @@ async function startServer() {
 
     app.listen(SERVER_PORT, () => {
       logger.info(`🚀 Server is running on port ${SERVER_PORT}`);
-      console.log(`📡 API endpoint: http://localhost:${SERVER_PORT}/api`);
-      console.log(`📡 Admin endpoint: http://localhost:${SERVER_PORT}/api/admin/orders`);
+      console.log(`📡 API endpoint: http://localhost:${SERVER_PORT}/api/`);
+      console.log(`📡 Admin endpoint: http://localhost:${SERVER_PORT}/api/admin`);
     });
 
   } catch (error) {

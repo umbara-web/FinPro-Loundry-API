@@ -1,14 +1,15 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GMAIL_APP_PASS = exports.GMAIL_EMAIL = exports.CLOUDINARY_CLOUD_NAME = exports.CLOUDINARY_API_SECRET = exports.CLOUDINARY_API_KEY = exports.SECRET_KEY = exports.BASE_WEB_URL = exports.PORT = void 0;
+exports.GMAIL_APP_PASS = exports.GMAIL_EMAIL = exports.CLOUDINARY_CLOUD_NAME = exports.CLOUDINARY_API_SECRET = exports.CLOUDINARY_API_KEY = exports.SECRET_KEY = exports.NEXT_PUBLIC_WEB_URL = exports.PORT = void 0;
 require("dotenv/config");
 const PORT = process.env.PORT || 8000;
 exports.PORT = PORT;
-let BASE_WEB_URL = process.env.BASE_WEB_URL || 'http://localhost:3000';
-exports.BASE_WEB_URL = BASE_WEB_URL;
+let NEXT_PUBLIC_WEB_URL = process.env.NEXT_PUBLIC_WEB_URL || 'http://localhost:3000';
+exports.NEXT_PUBLIC_WEB_URL = NEXT_PUBLIC_WEB_URL;
 // Force HTTP for localhost to avoid SSL errors
-if (BASE_WEB_URL.includes('localhost') && BASE_WEB_URL.startsWith('https://')) {
-    exports.BASE_WEB_URL = BASE_WEB_URL = BASE_WEB_URL.replace('https://', 'http://');
+if (NEXT_PUBLIC_WEB_URL.includes('localhost') &&
+    NEXT_PUBLIC_WEB_URL.startsWith('https://')) {
+    exports.NEXT_PUBLIC_WEB_URL = NEXT_PUBLIC_WEB_URL = NEXT_PUBLIC_WEB_URL.replace('https://', 'http://');
 }
 // Validate required environment variables
 if (!process.env.SECRET_KEY) {

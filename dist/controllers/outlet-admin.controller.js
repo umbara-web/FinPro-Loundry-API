@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getDashboardStats = exports.handleBypassRequest = exports.getBypassRequests = exports.getAttendanceReportController = void 0;
+exports.processOrderController = exports.getDashboardStats = exports.handleBypassRequest = exports.getBypassRequests = exports.getAttendanceReportController = void 0;
 const outlet_admin_service_1 = require("../services/outlet-admin.service");
 const db_1 = __importDefault(require("../configs/db"));
 const getAttendanceReportController = async (req, res, next) => {
@@ -117,3 +117,26 @@ const getDashboardStats = async (req, res, next) => {
     }
 };
 exports.getDashboardStats = getDashboardStats;
+const processOrderController = async (req, res, next) => {
+    var _a;
+    try {
+        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+        if (!userId) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+        const { id } = req.params; // orderId
+        const payload = req.body;
+        const staffRecord = await db_1.default.staff.findFirst({
+            where: { staff_id: userId, staff_type: 'OUTLET_ADMIN' },
+        });
+        if (!staffRecord) {
+            return res.status(403).json({ message: 'Unauthorized' });
+        }
+        const result = await (0, outlet_admin_service_1.processOrderService)(staffRecord.outlet_id, id, payload);
+        res.status(200).json(result);
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.processOrderController = processOrderController;

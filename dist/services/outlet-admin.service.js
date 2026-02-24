@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getDashboardStatsService = exports.handleBypassRequestService = exports.getBypassRequestsService = exports.getAttendanceReportService = void 0;
+exports.processOrderService = exports.getDashboardStatsService = exports.handleBypassRequestService = exports.getBypassRequestsService = exports.getAttendanceReportService = void 0;
 const db_1 = __importDefault(require("../configs/db"));
 const client_1 = require("@prisma/client");
 const getAttendanceReportService = async ({ outletId, startDate, endDate, staffType, }) => {
@@ -313,3 +313,59 @@ const getDashboardStatsService = async (outletId) => {
     };
 };
 exports.getDashboardStatsService = getDashboardStatsService;
+const processOrderService = async (outletId, orderId, payload) => {
+    const { items, totalWeight } = payload;
+    const order = await db_1.default.order.findUnique({
+        where: { id: orderId },
+        include: {
+            pickup_request: true,
+            order_item: true,
+        },
+    });
+    if (!order)
+        throw new Error('Order not found');
+    if (order.status !== client_1.Order_Status.CREATED) {
+        // Allow processing even if status is not strictly CREATED, but it should be in a state before washing.
+        if (order.status === client_1.Order_Status.IN_WASHING ||
+            order.status === client_1.Order_Status.COMPLETED) {
+            throw new Error('Order already processed');
+        }
+    }
+    return await db_1.default.$transaction(async (tx) => {
+        // Update Order Items
+        for (const item of items) {
+            const existingItem = order.order_item.find((oi) => oi.laundry_item_id === item.laundry_item_id);
+            if (existingItem) {
+                if (existingItem.qty !== item.qty) {
+                    await tx.order_Item.update({
+                        where: { id: existingItem.id },
+                        data: { qty: item.qty },
+                    });
+                }
+            }
+        }
+        // Calculate Price
+        const basePricePerKg = 6000;
+        const priceTotal = Math.floor(totalWeight * basePricePerKg); // No rounding to 100 for now, straightforward math
+        // Update Order
+        await tx.order.update({
+            where: { id: orderId },
+            data: {
+                total_weight: totalWeight,
+                price_total: priceTotal,
+                status: client_1.Order_Status.IN_WASHING,
+            },
+        });
+        // Create Washing Task
+        await tx.station_Task.create({
+            data: {
+                order_id: orderId,
+                task_type: client_1.Station_Task_Type.WASHING,
+                status: 'PENDING',
+            },
+        });
+        const staffName = 'Outlet Admin'; // We might want to pass this down if needed for logs
+        return { message: 'Order processed successfully' };
+    });
+};
+exports.processOrderService = processOrderService;

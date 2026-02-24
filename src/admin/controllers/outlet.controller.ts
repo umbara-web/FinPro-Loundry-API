@@ -31,10 +31,9 @@ export const createOutlet = async (req: Request, res: Response) => {
     } catch (error: any) {
         console.error('createOutlet error:', error);
         const errorMessage = error.message || 'Unknown error';
-        res.status(500).json({ 
-            error: 'Failed to create outlet', 
+        res.status(500).json({
+            error: 'Failed to create outlet',
             details: errorMessage,
-            // Include Prisma error info if available
             prismaError: error.code ? { code: error.code, meta: error.meta } : undefined
         });
     }

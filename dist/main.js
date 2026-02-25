@@ -33,7 +33,7 @@ app.use((0, helmet_1.default)({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 app.use((0, cors_1.default)({
-    origin: env_config_1.BASE_WEB_URL || 'http://localhost:3000', // Fallback to localhost
+    origin: env_config_1.NEXT_PUBLIC_WEB_URL || 'http://localhost:3000', // Fallback to localhost
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],

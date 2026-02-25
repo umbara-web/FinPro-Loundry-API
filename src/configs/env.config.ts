@@ -1,5 +1,6 @@
 import 'dotenv/config';
 
+
 const PORT = process.env.PORT || 8000;
 let NEXT_PUBLIC_WEB_URL =
   process.env.NEXT_PUBLIC_WEB_URL || 'http://localhost:3000';

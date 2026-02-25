@@ -71,7 +71,6 @@ const createOutlet = async (req, res) => {
         res.status(500).json({
             error: 'Failed to create outlet',
             details: errorMessage,
-            // Include Prisma error info if available
             prismaError: error.code ? { code: error.code, meta: error.meta } : undefined
         });
     }

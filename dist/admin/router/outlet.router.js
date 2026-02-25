@@ -36,7 +36,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const outletController = __importStar(require("../controllers/outlet.controller"));
 const router = (0, express_1.Router)();
-// Allow both SUPER_ADMIN and OUTLET_ADMIN to manage outlets
 const requireAdminRole = (req, res, next) => {
     const user = req.user;
     if (!user)

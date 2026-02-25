@@ -77,7 +77,7 @@ app.use('/api/admin/orders', authenticateJWT, orderRouter); // Renamed to avoid 
 
 // 2. Generic API Router
 // Handles other modules like /auth, /users, etc.
-app.use('/api', router);
+app.use('/', router);
 
 // 3. Root Endpoint
 app.get('/', (req, res) => {
@@ -108,10 +108,8 @@ async function startServer() {
 
     app.listen(SERVER_PORT, () => {
       logger.info(`🚀 Server is running on port ${SERVER_PORT}`);
-      console.log(`📡 API endpoint: http://localhost:${SERVER_PORT}/api`);
-      console.log(
-        `📡 Admin endpoint: http://localhost:${SERVER_PORT}/api/admin/orders`
-      );
+      console.log(`📡 API endpoint: http://localhost:${SERVER_PORT}/api/`);
+      console.log(`📡 Admin endpoint: http://localhost:${SERVER_PORT}/api/admin`);
     });
   } catch (error) {
     console.error('❌ Database connection failed:', error);

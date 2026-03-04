@@ -28,12 +28,12 @@ export class PaymentQueryHelper {
     }
 
     if (params.dateFrom || params.dateTo) {
-      where.created_at = {};
+      where.createdAt = {};
       if (params.dateFrom) {
-        where.created_at.gte = new Date(params.dateFrom);
+        where.createdAt.gte = new Date(params.dateFrom);
       }
       if (params.dateTo) {
-        where.created_at.lte = new Date(params.dateTo);
+        where.createdAt.lte = new Date(params.dateTo);
       }
     }
 

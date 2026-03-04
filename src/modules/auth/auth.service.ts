@@ -1,148 +1,196 @@
-import prisma from '../../configs/db';
+import { AuthRepository } from './auth.repository';
 import { RegisterInput, VerifyInput, LoginInput } from './auth.schemas';
-import { createCustomError } from '../../common/utils/customError';
+import { BadRequestError } from '../../core/exceptions/BadRequestError';
+import { NotFoundError } from '../../core/exceptions/NotFoundError';
+import { NEXT_PUBLIC_WEB_URL } from '../../configs/env.config';
 import {
   generateToken,
   verifyToken,
   hashPassword,
   comparePassword,
 } from '../../common/utils/token.helper';
-import { generateAndSendVerification } from './auth.password.service';
+import {
+  sendVerificationEmail,
+  sendResetPasswordEmail,
+} from '../../common/utils/email.helper';
 
-// Re-export from password service for backwards compatibility
-export {
-  requestResetPassword,
-  resetPassword,
-  resendVerification,
-} from './auth.password.service';
+export class AuthService {
+  private authRepository = new AuthRepository();
 
-export async function registerUser(data: RegisterInput) {
-  const existingUser = await prisma.user.findUnique({
-    where: { email: data.email },
-  });
+  async registerUser(data: RegisterInput) {
+    const existingUser = await this.authRepository.findUserByEmail(data.email);
 
-  if (existingUser) {
-    if (existingUser.password) {
-      throw createCustomError(400, 'Email already registered');
+    if (existingUser) {
+      if (existingUser.password) {
+        throw new BadRequestError('Email already registered');
+      }
+      await this.generateAndSendVerification(existingUser);
+      return { message: 'Verification email sent (resend)' };
     }
-    await generateAndSendVerification(existingUser);
-    return { message: 'Verification email sent (resend)' };
-  }
 
-  const user = await prisma.user.create({
-    data: {
+    const user = await this.authRepository.createUser({
       name: data.name,
       email: data.email,
       phone: data.phone,
       password: '',
-      lat: '',
-      long: '',
-    },
-  });
+      // lat: '', long: '' are removed assuming schema mapping adjusts or address is created via Address mode
+    });
 
-  await generateAndSendVerification(user);
-  return { message: 'Verification email sent' };
-}
-
-export async function verifyUser(data: VerifyInput) {
-  const tokenRecord = await prisma.registerToken.findUnique({
-    where: { token: data.token },
-  });
-
-  if (!tokenRecord) {
-    throw createCustomError(400, 'Invalid or expired verification token');
+    await this.generateAndSendVerification(user);
+    return { message: 'Verification email sent' };
   }
 
-  const decoded = verifyToken(data.token);
-  const hashedPassword = await hashPassword(data.password);
+  async verifyUser(data: VerifyInput) {
+    const tokenRecord = await this.authRepository.findToken(data.token);
 
-  await prisma.user.update({
-    where: { id: decoded.userId },
-    data: { password: hashedPassword, isVerified: true },
-  });
+    if (!tokenRecord) {
+      throw new BadRequestError('Invalid or expired verification token');
+    }
 
-  await prisma.registerToken.delete({ where: { token: data.token } });
-  return { message: 'Email verified successfully' };
-}
+    const decoded = verifyToken(data.token) as { userId: string };
+    const hashedPassword = await hashPassword(data.password);
 
-export async function loginUser(data: LoginInput) {
-  const user = await prisma.user.findUnique({ where: { email: data.email } });
+    await this.authRepository.updateUser(decoded.userId, {
+      password: hashedPassword,
+      isVerified: true,
+    });
 
-  if (!user) throw createCustomError(400, 'Invalid email or password');
-
-  if (!user.password) {
-    throw createCustomError(
-      400,
-      'Please verify your email address before logging in'
-    );
+    await this.authRepository.deleteToken(data.token);
+    return { message: 'Email verified successfully' };
   }
 
-  const isPasswordValid = await comparePassword(data.password, user.password);
-  if (!isPasswordValid)
-    throw createCustomError(400, 'Invalid email or password');
+  async loginUser(data: LoginInput) {
+    const user = await this.authRepository.findUserByEmail(data.email);
 
-  return buildLoginResponse(user);
-}
+    if (!user) throw new BadRequestError('Invalid email or password');
 
-function buildLoginResponse(user: any) {
-  const token = generateToken(
-    {
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-      isVerified: user.isVerified,
-    },
-    '1d'
-  );
+    if (!user.password) {
+      throw new BadRequestError(
+        'Please verify your email address before logging in'
+      );
+    }
 
-  return {
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      isVerified: user.isVerified,
-      profile_picture_url: user.profile_picture_url,
-    },
-    token,
-  };
-}
+    const isPasswordValid = await comparePassword(data.password, user.password);
+    if (!isPasswordValid)
+      throw new BadRequestError('Invalid email or password');
 
-export async function socialLogin(data: { email: string; name: string }) {
-  let user = await prisma.user.findUnique({ where: { email: data.email } });
+    return this.buildLoginResponse(user);
+  }
 
-  if (!user) {
-    user = await prisma.user.create({
-      data: {
+  async socialLogin(data: { email: string; name: string }) {
+    let user = await this.authRepository.findUserByEmail(data.email);
+
+    if (!user) {
+      user = await this.authRepository.createUser({
         name: data.name,
         email: data.email,
         password: '',
         role: 'CUSTOMER',
-        lat: '',
-        long: '',
         isVerified: true,
-      },
-    });
+      });
+    }
+
+    return this.buildLoginResponse(user);
   }
 
-  return buildLoginResponse(user);
-}
+  async getMe(userId: string) {
+    const user = await this.authRepository.findUserById(userId);
+    if (!user) throw new NotFoundError('User not found');
 
-export async function getMe(userId: string) {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    include: {
-      staff: {
-        select: { outlet_id: true },
-        take: 1,
+    const { password, ...userWithoutPassword } = user;
+    return {
+      ...userWithoutPassword,
+      outlet_id: user.outlet?.id || null, // Adapted to new schema
+    };
+  }
+
+  // ---- Password / Verifications Helpers ----
+  async generateAndSendVerification(user: {
+    id: string;
+    email: string;
+    name: string;
+  }) {
+    const token = generateToken({ userId: user.id, email: user.email }, '1h');
+    await this.authRepository.createToken(token);
+    const verificationLink = `${NEXT_PUBLIC_WEB_URL}/auth/verify-email?token=${token}`;
+    await sendVerificationEmail(user.email, user.name, verificationLink);
+  }
+
+  async requestResetPassword(data: { email: string }) {
+    const user = await this.authRepository.findUserByEmail(data.email);
+    if (!user) throw new NotFoundError('User not found');
+
+    if (!user.password) {
+      throw new BadRequestError(
+        'Cannot reset password for social login accounts'
+      );
+    }
+
+    const token = generateToken({ userId: user.id }, '1h');
+    await this.authRepository.createToken(token);
+
+    const resetLink = `${NEXT_PUBLIC_WEB_URL}/auth/reset-password/confirm/${token}`;
+    await sendResetPasswordEmail(user.email, user.name, resetLink);
+
+    return { message: 'Reset password email sent' };
+  }
+
+  async resetPassword(data: { token: string; password: string }) {
+    const tokenRecord = await this.authRepository.findToken(data.token);
+
+    if (!tokenRecord)
+      throw new BadRequestError('Invalid or expired reset token');
+
+    const decoded = verifyToken(data.token) as { userId: string };
+    const hashedPassword = await hashPassword(data.password);
+
+    await this.authRepository.updateUser(decoded.userId, {
+      password: hashedPassword,
+    });
+    await this.authRepository.deleteToken(data.token);
+
+    return { message: 'Password reset successfully' };
+  }
+
+  async resendVerification(email: string) {
+    const user = await this.authRepository.findUserByEmail(email);
+    if (!user) throw new NotFoundError('Email tidak ditemukan');
+
+    if (user.isVerified) {
+      throw new BadRequestError('Akun sudah terverifikasi. Silakan login.');
+    }
+
+    const token = generateToken({ userId: user.id, email: user.email }, '1h');
+    await this.authRepository.createToken(token);
+
+    const verificationLink = `${NEXT_PUBLIC_WEB_URL}/auth/verify-email?token=${token}`;
+    await sendVerificationEmail(user.email, user.name, verificationLink);
+
+    return { message: 'Email verifikasi telah dikirim ulang' };
+  }
+
+  // ---- Private Helpers ----
+  private buildLoginResponse(user: any) {
+    const token = generateToken(
+      {
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+        isVerified: user.isVerified,
       },
-    },
-  });
-  if (!user) throw createCustomError(404, 'User not found');
+      '1d'
+    );
 
-  const { password, staff, ...userWithoutPassword } = user;
-  return {
-    ...userWithoutPassword,
-    outlet_id: staff?.[0]?.outlet_id || null,
-  };
+    return {
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isVerified: user.isVerified,
+        profile_picture_url: user.profileImage, // Using proper schema field mapping
+      },
+      token,
+    };
+  }
 }

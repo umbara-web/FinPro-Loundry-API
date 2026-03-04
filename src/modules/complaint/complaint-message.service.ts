@@ -28,7 +28,7 @@ export class ComplaintMessageService {
         message,
       },
       include: {
-        sender: {
+        customer: {
           select: {
             id: true,
             name: true,
@@ -46,9 +46,9 @@ export class ComplaintMessageService {
   static async getMessages(complaintId: string) {
     const messages = await prisma.complaintMessage.findMany({
       where: { complaint_id: complaintId },
-      orderBy: { created_at: 'asc' },
+      orderBy: { createdAt: 'asc' },
       include: {
-        sender: {
+        customer: {
           select: {
             id: true,
             name: true,

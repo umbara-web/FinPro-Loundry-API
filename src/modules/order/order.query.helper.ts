@@ -40,14 +40,14 @@ export class OrderQueryHelper {
     }
 
     if (params.dateFrom || params.dateTo) {
-      where.created_at = {};
+      where.createdAt = {};
       if (params.dateFrom) {
-        where.created_at.gte = new Date(params.dateFrom);
+        where.createdAt.gte = new Date(params.dateFrom);
       }
       if (params.dateTo) {
         const endDate = new Date(params.dateTo);
         endDate.setHours(23, 59, 59, 999);
-        where.created_at.lte = endDate;
+        where.createdAt.lte = endDate;
       }
     }
 
@@ -59,20 +59,20 @@ export class OrderQueryHelper {
     if (sortBy) {
       orderBy[sortBy] = sortOrder || 'desc';
     } else {
-      orderBy.created_at = 'desc';
+      orderBy.createdAt = 'desc';
     }
     return orderBy;
   }
 
   static getPickupInclude() {
     return {
-      customer_address: true,
+      address: true,
       outlet: true,
       driver: { select: { id: true, name: true, phone: true } },
-      order: {
+      orders: {
         include: {
-          order_item: { include: { laundry_item: true } },
-          payment: { orderBy: { created_at: Prisma.SortOrder.desc } },
+          order_items: { include: { laundry_item: true } },
+          payments: { orderBy: { createdAt: Prisma.SortOrder.desc } },
         },
       },
     };
@@ -82,13 +82,13 @@ export class OrderQueryHelper {
     return {
       pickup_request: {
         include: {
-          customer_address: true,
+          address: true,
           outlet: true,
           driver: { select: { id: true, name: true, phone: true } },
         },
       },
-      order_item: { include: { laundry_item: true } },
-      payment: { orderBy: { created_at: Prisma.SortOrder.desc } },
+      order_items: { include: { laundry_item: true } },
+      payments: { orderBy: { createdAt: Prisma.SortOrder.desc } },
     };
   }
 

@@ -15,7 +15,7 @@ export const getStationTasksService = async (
     const includeRelations = {
       order: {
         include: {
-          order_item: { include: { laundry_item: true } },
+          order_items: { include: { laundry_item: true } },
           pickup_request: {
             include: {
               customer: { select: { name: true, profile_picture_url: true } },
@@ -23,8 +23,8 @@ export const getStationTasksService = async (
           },
         },
       },
-      station_task_item: { include: { laundry_item: true } },
-      bypass_request: true,
+      station_task_items: { include: { laundry_item: true } },
+      bypass_requests: true,
     };
 
     const poolTasks = await prisma.station_Task.findMany({
@@ -86,7 +86,7 @@ const validateTaskItems = (task: any, inputItems: any[]) => {
   const processingItems: any[] = [];
 
   for (const inputItem of inputItems) {
-    const originalItem = task.order.order_item.find(
+    const originalItem = task.order.order_items.find(
       (oi: any) => oi.laundry_item_id === inputItem.laundry_item_id
     );
 
@@ -101,7 +101,7 @@ const validateTaskItems = (task: any, inputItems: any[]) => {
     });
   }
 
-  if (inputItems.length !== task.order.order_item.length) mismatch = true;
+  if (inputItems.length !== task.order.order_items.length) mismatch = true;
 
   return { mismatch, processingItems };
 };
@@ -192,7 +192,7 @@ export const processTaskService = async (
   try {
     const task = await prisma.station_Task.findUnique({
       where: { id: taskId },
-      include: { order: { include: { order_item: true } } },
+      include: { order: { include: { order_items: true } } },
     });
 
     if (!task) throw new Error('Task not found');
@@ -309,7 +309,7 @@ export const getWorkerHistoryService = async (
                   customer: { select: { name: true } },
                 },
               },
-              order_item: { include: { laundry_item: true } },
+              order_items: { include: { laundry_item: true } },
             },
           },
         },
@@ -329,8 +329,8 @@ export const getWorkerHistoryService = async (
         orderNumber: `ORD-${task.order_id.slice(-4).toUpperCase()}`,
         taskType: task.task_type,
         customerName: task.order.pickup_request?.customer?.name || 'N/A',
-        itemCount: task.order.order_item.reduce(
-          (sum, item) => sum + item.qty,
+        itemCount: task.order.order_items.reduce(
+          (sum: number, item: any) => sum + item.qty,
           0
         ),
         completedAt: task.finished_at,
@@ -357,7 +357,7 @@ export const getTaskDetailService = async (
       include: {
         order: {
           include: {
-            order_item: { include: { laundry_item: true } },
+            order_items: { include: { laundry_item: true } },
             pickup_request: {
               include: {
                 customer: {
@@ -367,8 +367,8 @@ export const getTaskDetailService = async (
             },
           },
         },
-        station_task_item: { include: { laundry_item: true } },
-        bypass_request: true,
+        station_task_items: { include: { laundry_item: true } },
+        bypass_requests: true,
       },
     });
 

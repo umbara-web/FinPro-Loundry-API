@@ -1,15 +1,5 @@
 import { Router } from 'express';
-import {
-  register,
-  verify,
-  login,
-  socialLoginController,
-  requestResetPassword,
-  resetPassword,
-  getMe,
-  logout,
-  resendVerificationEmail,
-} from './auth.controller';
+import { AuthController } from './auth.controller';
 import { validateBody } from '../../common/middlewares/validate.middleware';
 import {
   registerSchema,
@@ -21,40 +11,49 @@ import {
 import { authMiddleware } from '../../common/middlewares/auth.middleware';
 
 const authRouter = Router();
+const authController = new AuthController();
 
 // POST /api/auth/register
-authRouter.post('/register', validateBody(registerSchema), register);
+authRouter.post(
+  '/register',
+  validateBody(registerSchema),
+  authController.register
+);
 
 // Login endpoint
-authRouter.post('/login', validateBody(loginSchema), login);
+authRouter.post('/login', validateBody(loginSchema), authController.login);
 
 // Get Me endpoint
-authRouter.get('/me', authMiddleware, getMe);
+authRouter.get('/me', authMiddleware, authController.getMe);
 
 // Logout endpoint
-authRouter.post('/logout', authMiddleware, logout);
+authRouter.post('/logout', authMiddleware, authController.logout);
 
 // Social Login endpoint
-authRouter.post('/social', socialLoginController);
+authRouter.post('/social', authController.socialLoginController);
 
 // Verification endpoint
-authRouter.post('/verification', validateBody(verifySchema), verify);
+authRouter.post(
+  '/verification',
+  validateBody(verifySchema),
+  authController.verify
+);
 
 // Resend Verification Email endpoint
-authRouter.post('/resend-verification', resendVerificationEmail);
+authRouter.post('/resend-verification', authController.resendVerificationEmail);
 
 // Request Reset Password endpoint
 authRouter.post(
   '/request-reset-password',
   validateBody(requestResetPasswordSchema),
-  requestResetPassword
+  authController.requestResetPassword
 );
 
 // Reset Password endpoint
 authRouter.post(
   '/reset-password',
   validateBody(resetPasswordSchema),
-  resetPassword
+  authController.resetPassword
 );
 
 export default authRouter;

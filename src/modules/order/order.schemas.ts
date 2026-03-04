@@ -13,7 +13,7 @@ export const getOrdersSchema = z.object({
     .refine((val) => !val || !isNaN(Number(val)), {
       message: 'Limit must be a number',
     }),
-  sortBy: z.enum(['created_at', 'updated_at', 'status']).optional(),
+  sortBy: z.enum(['createdAt', 'updatedAt', 'status']).optional(),
   sortOrder: z.enum(['asc', 'desc']).optional(),
   search: z.string().optional(),
   status: z.string().optional(),

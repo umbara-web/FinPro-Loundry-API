@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { OrderService } from './order.service';
 import { GetOrdersQuery } from './order.schemas';
+import { sendResponse } from '../../core/utils/response.util';
+import { BadRequestError } from '../../core/exceptions/BadRequestError';
 
 export class OrderController {
   static async getOrders(
@@ -13,7 +15,17 @@ export class OrderController {
       const params = OrderController.parseQueryParams(req.query);
       const result = await OrderService.getAllOrders(user.userId, params);
 
-      OrderController.sendSuccessResponse(res, result);
+      res.status(200).json({
+        success: true,
+        message: 'Orders retrieved successfully',
+        data: result.data,
+        meta: {
+          page: result.page,
+          limit: result.limit,
+          total: result.total,
+          totalPages: result.totalPages,
+        },
+      });
     } catch (error) {
       next(error);
     }
@@ -24,10 +36,12 @@ export class OrderController {
       const user = OrderController.validateUser(req);
       const result = await OrderService.getOrderStats(user.userId);
 
-      res.status(200).json({
-        message: 'Order stats retrieved successfully',
-        data: result,
-      });
+      return sendResponse(
+        res,
+        200,
+        'Order stats retrieved successfully',
+        result
+      );
     } catch (error) {
       next(error);
     }
@@ -39,10 +53,7 @@ export class OrderController {
       const { orderId } = req.params;
       const result = await OrderService.confirmOrder(user.userId, orderId);
 
-      res.status(200).json({
-        message: 'Order confirmed successfully',
-        data: result,
-      });
+      return sendResponse(res, 200, 'Order confirmed successfully', result);
     } catch (error) {
       next(error);
     }
@@ -54,19 +65,21 @@ export class OrderController {
       const { id } = req.params;
       const result = await OrderService.getOrderById(user.userId, id);
 
-      res.status(200).json({
-        message: 'Order details retrieved successfully',
-        data: result,
-      });
+      return sendResponse(
+        res,
+        200,
+        'Order details retrieved successfully',
+        result
+      );
     } catch (error) {
       next(error);
     }
   }
 
   private static validateUser(req: Request) {
-    const user = req.user;
+    const user = req.user as any;
     if (!user) {
-      throw new Error('User not found');
+      throw new BadRequestError('User not found');
     }
     return user;
   }
@@ -77,25 +90,12 @@ export class OrderController {
     return {
       page: page ? parseInt(page) : 1,
       limit: limit ? parseInt(limit) : 10,
-      sortBy: sortBy || 'created_at',
+      sortBy: sortBy || 'createdAt',
       sortOrder: sortOrder || 'desc',
       search,
       status,
       dateFrom,
       dateTo,
     };
-  }
-
-  private static sendSuccessResponse(res: Response, result: any) {
-    res.status(200).json({
-      message: 'Orders retrieved successfully',
-      data: result.data,
-      meta: {
-        page: result.page,
-        limit: result.limit,
-        total: result.total,
-        totalPages: result.totalPages,
-      },
-    });
   }
 }

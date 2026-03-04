@@ -2,10 +2,12 @@ import { prisma } from '../lib/prisma';
 import { Prisma } from '@prisma/client';
 
 export const getAddresses = async (userId?: string) => {
-  const where: Prisma.Customer_AddressWhereInput = userId ? { customer_id: userId } : {};
+  const where: Prisma.Customer_AddressWhereInput = userId
+    ? { customer_id: userId }
+    : {};
   return await prisma.customer_Address.findMany({
     where,
-    orderBy: { created_at: 'desc' },
+    orderBy: { createdAt: 'desc' },
   });
 };
 
@@ -15,7 +17,9 @@ export const getAddressById = async (id: string) => {
   });
 };
 
-export const createAddress = async (data: Prisma.Customer_AddressUncheckedCreateInput) => {
+export const createAddress = async (
+  data: Prisma.Customer_AddressUncheckedCreateInput
+) => {
   // If this is set to primary, update others to false
   if (data.is_primary && data.customer_id) {
     await prisma.customer_Address.updateMany({
@@ -29,7 +33,10 @@ export const createAddress = async (data: Prisma.Customer_AddressUncheckedCreate
   });
 };
 
-export const updateAddress = async (id: string, data: Prisma.Customer_AddressUncheckedUpdateInput) => {
+export const updateAddress = async (
+  id: string,
+  data: Prisma.Customer_AddressUncheckedUpdateInput
+) => {
   if (data.is_primary === true && typeof data.customer_id === 'string') {
     await prisma.customer_Address.updateMany({
       where: { customer_id: data.customer_id, id: { not: id } },

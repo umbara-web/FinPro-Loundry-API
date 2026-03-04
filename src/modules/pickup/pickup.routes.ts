@@ -1,11 +1,5 @@
 import { Router } from 'express';
-import {
-  createPickup,
-  getMyPickups,
-  getPickupById,
-  cancelPickup,
-  findNearestOutlet,
-} from './pickup.controller';
+import { PickupController } from './pickup.controller';
 import {
   authMiddleware,
   roleGuard,
@@ -22,7 +16,7 @@ pickupRouter.get(
   authMiddleware,
   roleGuard(['CUSTOMER']),
   verificationGuard,
-  findNearestOutlet
+  PickupController.findNearestOutlet
 );
 
 // POST /api/pickup - Create new pickup request
@@ -32,7 +26,7 @@ pickupRouter.post(
   roleGuard(['CUSTOMER']),
   verificationGuard,
   validateBody(createPickupSchema),
-  createPickup
+  PickupController.createPickup
 );
 
 // GET /api/pickup - Get all my pickup requests
@@ -41,7 +35,7 @@ pickupRouter.get(
   authMiddleware,
   roleGuard(['CUSTOMER']),
   verificationGuard,
-  getMyPickups
+  PickupController.getMyPickups
 );
 
 // GET /api/pickup/:id - Get specific pickup request
@@ -50,7 +44,7 @@ pickupRouter.get(
   authMiddleware,
   roleGuard(['CUSTOMER']),
   verificationGuard,
-  getPickupById
+  PickupController.getPickupById
 );
 
 // PUT /api/pickup/:id/cancel - Cancel pickup request
@@ -59,7 +53,7 @@ pickupRouter.put(
   authMiddleware,
   roleGuard(['CUSTOMER']),
   verificationGuard,
-  cancelPickup
+  PickupController.cancelPickup
 );
 
 export default pickupRouter;

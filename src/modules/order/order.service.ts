@@ -1,30 +1,25 @@
-import prisma from '../../configs/db';
 import { Order_Status } from '@prisma/client';
 import { GetOrdersParams } from './order.types';
-import { OrderQueryHelper } from './order.query.helper';
 import { OrderMapper } from './order.mapper';
 import { OrderStatsHelper } from './order.stats.helper';
+import { OrderRepository } from './order.repository';
+import { NotFoundError } from '../../core/exceptions/NotFoundError';
+import { BadRequestError } from '../../core/exceptions/BadRequestError';
 
 export class OrderService {
+  private static orderRepository = new OrderRepository();
+
   static async getAllOrders(userId: string, params: GetOrdersParams) {
     const { page, limit } = params;
     const skip = (page - 1) * limit;
-    const where = OrderQueryHelper.buildWhereClause(userId, params);
-    const orderBy = OrderQueryHelper.buildOrderBy(
-      params.sortBy,
-      params.sortOrder
-    );
 
-    const [total, pickupRequests] = await Promise.all([
-      prisma.pickup_Request.count({ where }),
-      prisma.pickup_Request.findMany({
-        where,
+    const { total, pickupRequests } =
+      await this.orderRepository.getPickupRequestsWithCount(
+        userId,
+        params,
         skip,
-        take: limit,
-        orderBy,
-        include: OrderQueryHelper.getPickupInclude(),
-      }),
-    ]);
+        limit
+      );
 
     return {
       data: OrderMapper.toOrderListResponse(pickupRequests),
@@ -36,26 +31,24 @@ export class OrderService {
   }
 
   static async confirmOrder(userId: string, orderId: string) {
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
-      include: { pickup_request: true },
-    });
+    const order = await this.orderRepository.findOrderById(orderId, true);
 
-    if (!order) throw new Error('Order not found');
-    if (order.pickup_request.customer_id !== userId)
-      throw new Error('Forbidden');
+    if (!order) throw new NotFoundError('Order not found');
+    if ((order as any).pickup_request.customer_id !== userId) {
+      throw new BadRequestError('Forbidden');
+    }
 
     if (order.status !== Order_Status.DELIVERED) {
       if (order.status === Order_Status.COMPLETED) return order;
-      throw new Error(
+      throw new BadRequestError(
         'Order cannot be confirmed yet. Status must be DELIVERED.'
       );
     }
 
-    return prisma.order.update({
-      where: { id: orderId },
-      data: { status: Order_Status.COMPLETED },
-    });
+    return await this.orderRepository.updateOrderStatus(
+      orderId,
+      Order_Status.COMPLETED
+    );
   }
 
   static async getOrderStats(userId: string) {
@@ -66,26 +59,18 @@ export class OrderService {
     const twoDaysAgo = new Date();
     twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
 
-    const result = await prisma.order.updateMany({
-      where: {
-        status: Order_Status.DELIVERED,
-        updated_at: { lte: twoDaysAgo },
-      },
-      data: { status: Order_Status.COMPLETED },
-    });
-
+    const result =
+      await this.orderRepository.autoConfirmDeliveredOrders(twoDaysAgo);
     return result.count;
   }
 
   static async getOrderById(userId: string, orderId: string) {
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
-      include: OrderQueryHelper.getOrderInclude(),
-    });
+    const order = await this.orderRepository.findOrderById(orderId, false);
 
-    if (!order) throw new Error('Order not found');
-    if ((order as any).pickup_request.customer_id !== userId)
-      throw new Error('Forbidden');
+    if (!order) throw new NotFoundError('Order not found');
+    if ((order as any).pickup_request.customer_id !== userId) {
+      throw new BadRequestError('Forbidden');
+    }
 
     return OrderMapper.toOrderDetailResponse(order);
   }

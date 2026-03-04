@@ -1,75 +1,57 @@
-import prisma from '../../configs/db';
+import { UserRepository } from './user.repository';
+// Assuming token.helper and auth.password.service are properly typed
 import { hashPassword, comparePassword } from '../../common/utils/token.helper';
-import { createCustomError } from '../../common/utils/customError';
+import { BadRequestError } from '../../core/exceptions/BadRequestError';
+import { NotFoundError } from '../../core/exceptions/NotFoundError';
+
+// Placeholder for external dependency, would ideally be moved to a notification service
+import { generateAndSendVerification } from '../auth/auth.password.service';
 
 export class UserService {
+  private userRepository: UserRepository;
+
+  constructor() {
+    this.userRepository = new UserRepository();
+  }
+
   async updateAvatar(userId: string, avatarUrl: string) {
-    return await prisma.user.update({
-      where: { id: userId },
-      data: {
-        profile_picture_url: avatarUrl,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        isVerified: true,
-        profile_picture_url: true,
-        phone: true,
-      },
+    return await this.userRepository.update(userId, {
+      profile_picture_url: avatarUrl,
     });
   }
+
   async updateProfile(
     userId: string,
     data: { name?: string; phone?: string; email?: string; birthDate?: Date }
   ) {
-    // Check if email is being updated
-    if (data.email) {
-      const existingUser = await prisma.user.findFirst({
-        where: {
-          email: data.email,
-          NOT: { id: userId },
-        },
-      });
+    const currentUser = await this.userRepository.findById(userId);
+    if (!currentUser) throw new NotFoundError('User not found');
 
-      if (existingUser) {
-        throw new Error('Email already in use');
+    if (data.email && data.email !== currentUser.email) {
+      const existingEmail = await this.userRepository.findByEmail(data.email);
+      if (existingEmail && existingEmail.id !== userId) {
+        throw new BadRequestError('Email is already in use');
       }
     }
 
-    // If email changes, set isVerified to false
-    // We need to fetch current user to compare? Or just update if data.email is present?
-    // Let's assume controller filters `data`.
-
     const updateData: any = { ...data };
 
-    // We will handle email verification logic in controller or separate service method if needed.
-    // For now simple update.
-
-    // Actually, requirement says "wajib verifikasi ulang".
-    // So if email changes, we set isVerified = false.
-
-    const currentUser = await prisma.user.findUnique({ where: { id: userId } });
-
-    if (data.email && data.email !== currentUser?.email) {
+    if (data.email && data.email !== currentUser.email) {
       updateData.isVerified = false;
-      // Trigger verification email sending in controller
     }
 
-    return await prisma.user.update({
-      where: { id: userId },
-      data: updateData,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        isVerified: true,
-        profile_picture_url: true,
-        phone: true,
-      },
-    });
+    const updatedUser = await this.userRepository.update(userId, updateData);
+
+    if (data.email && data.email !== currentUser.email) {
+      // Background process: trigger email verification
+      generateAndSendVerification({
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+      }).catch(console.error); // Do not await if not strictly needed or handle failure gracefully
+    }
+
+    return updatedUser;
   }
 
   async changePassword(
@@ -77,22 +59,19 @@ export class UserService {
     oldPassword: string,
     newPassword: string
   ) {
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const user = await this.userRepository.findById(userId);
     if (!user || !user.password) {
-      throw createCustomError(400, 'User not found or no password set');
+      throw new BadRequestError('User not found or no password set');
     }
 
     const isMatch = await comparePassword(oldPassword, user.password);
     if (!isMatch) {
-      throw createCustomError(400, 'Password lama salah');
+      throw new BadRequestError('Password lama is incorrect');
     }
 
     const hashedPassword = await hashPassword(newPassword);
 
-    await prisma.user.update({
-      where: { id: userId },
-      data: { password: hashedPassword },
-    });
+    await this.userRepository.updatePassword(userId, hashedPassword);
 
     return { message: 'Password updated successfully' };
   }

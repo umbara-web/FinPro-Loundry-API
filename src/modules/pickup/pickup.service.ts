@@ -1,33 +1,31 @@
-import prisma from '../../configs/db';
-import { createCustomError } from '../../common/utils/customError';
 import { CreatePickupInput } from './pickup.types';
 import { PickupGeoHelper } from './pickup.geo.helper';
 import { PickupValidationHelper } from './pickup.validation';
+import { PickupRepository } from './pickup.repository';
+import { BadRequestError } from '../../core/exceptions/BadRequestError';
+import { NotFoundError } from '../../core/exceptions/NotFoundError';
 
 export { findNearestOutletByCoordinates } from './pickup.geo.helper';
 
-export async function createPickupRequest(data: CreatePickupInput) {
-  const address = await PickupValidationHelper.validateCustomerAndAddress(
-    data.customerId,
-    data.addressId
-  );
+export class PickupService {
+  private static pickupRepository = new PickupRepository();
 
-  if (!address.lat || !address.long) {
-    throw createCustomError(400, 'Address coordinates missing');
-  }
+  static async createPickupRequest(data: CreatePickupInput) {
+    const address = await PickupValidationHelper.validateCustomerAndAddress(
+      data.customerId,
+      data.addressId
+    );
 
-  const assignedOutletId = await PickupGeoHelper.getOrValidateOutlet(
-    data.outletId,
-    address.lat,
-    address.long
-  );
+    if (!address.lat || !address.long) {
+      throw new BadRequestError('Address coordinates missing');
+    }
 
-  return createPickupInDb(data, assignedOutletId);
-}
+    const assignedOutletId = await PickupGeoHelper.getOrValidateOutlet(
+      data.outletId,
+      address.lat,
+      address.long
+    );
 
-function createPickupInDb(data: CreatePickupInput, assignedOutletId: string) {
-  return prisma.$transaction(async (tx) => {
-    // Append manual items to notes if any
     let finalNotes = data.notes || '';
     if (data.manualItems && data.manualItems.length > 0) {
       const manualItemsText = data.manualItems
@@ -38,134 +36,41 @@ function createPickupInDb(data: CreatePickupInput, assignedOutletId: string) {
         : `Manual Items: ${manualItemsText}`;
     }
 
-    const pickup = await tx.pickup_Request.create({
-      data: {
-        customer_id: data.customerId,
-        address_id: data.addressId,
-        schedulled_pickup_at: data.scheduledPickupAt,
-        notes: finalNotes || undefined,
-        assigned_outlet_id: assignedOutletId,
-        status: 'WAITING_DRIVER',
-      },
-      include: {
-        customer: { select: { id: true, name: true, email: true } },
-        customer_address: true,
-        outlet: true,
-      },
-    });
-
-    // Create Order if items are provided or just to initialize the order flow
-    if ((data.items && data.items.length > 0) || finalNotes) {
-      // Get outlet admin for this outlet
-      const outletAdmin = await tx.staff.findFirst({
-        where: {
-          outlet_id: assignedOutletId,
-          staff_type: 'OUTLET_ADMIN',
-        },
-        select: { staff_id: true },
-      });
-
-      if (!outletAdmin) {
-        throw createCustomError(400, 'No outlet admin found for this outlet');
-      }
-
-      const orderData: Parameters<typeof tx.order.create>[0]['data'] = {
-        pickup_request_id: pickup.id,
-        outlet_id: assignedOutletId,
-        outlet_admin_id: outletAdmin.staff_id,
-        total_weight: 0, // Initial 0
-        price_total: 0, // Initial 0
-        status: 'CREATED',
-      };
-
-      if (data.items && data.items.length > 0) {
-        const laundryItemIds = [...new Set(data.items.map((i) => i.laundryItemId))];
-        const laundryItems = await tx.laundry_Item.findMany({
-          where: { id: { in: laundryItemIds } },
-          select: { id: true, name: true, price: true, unit: true },
-        });
-        const itemMap = new Map(laundryItems.map((li) => [li.id, li]));
-
-        orderData.order_item = {
-          create: data.items.map((item) => {
-            const laundryItem = itemMap.get(item.laundryItemId);
-            if (!laundryItem) {
-              throw createCustomError(400, `Laundry item not found: ${item.laundryItemId}`);
-            }
-            return {
-              laundry_item_id: item.laundryItemId,
-              itemName: laundryItem.name,
-              price: laundryItem.price,
-              unit: laundryItem.unit,
-              qty: item.qty,
-            };
-          }),
-        };
-      }
-
-      await tx.order.create({ data: orderData });
+    try {
+      return await this.pickupRepository.createPickupWithOrder(
+        data,
+        finalNotes,
+        assignedOutletId
+      );
+    } catch (e: any) {
+      throw new BadRequestError(e.message || 'Failed to create pickup request');
     }
+  }
 
-    return pickup;
-  });
-};
+  static async getPickupRequestsByCustomer(customerId: string) {
+    return await this.pickupRepository.getPickupRequestsByCustomer(customerId);
+  }
 
-export async function getPickupRequestsByCustomer(customerId: string) {
-  return prisma.pickup_Request.findMany({
-    where: { customer_id: customerId },
-    include: {
-      customer_address: true,
-      outlet: { select: { id: true, name: true, address: true } },
-      driver: { select: { id: true, name: true, phone: true } },
-    },
-    orderBy: { created_at: 'desc' },
-  });
+  static async getPickupRequestById(id: string, customerId?: string) {
+    const pickupRequest = await this.pickupRepository.getPickupRequestById(id);
+
+    if (!pickupRequest) throw new NotFoundError('Pickup request not found');
+
+    PickupValidationHelper.validatePickupOwnership(
+      pickupRequest.customer_id,
+      customerId
+    );
+
+    return pickupRequest;
+  }
+
+  static async cancelPickupRequest(id: string, customerId: string) {
+    const pickupRequest = await this.pickupRepository.findPickupByIdOnly(id);
+
+    if (!pickupRequest) throw new NotFoundError('Pickup request not found');
+
+    PickupValidationHelper.validateCancellable(pickupRequest, customerId);
+
+    return await this.pickupRepository.cancelPickupRequest(id);
+  }
 }
-
-async function fetchPickupRequest(id: string) {
-  const pickupRequest = await prisma.pickup_Request.findUnique({
-    where: { id },
-    include: {
-      customer: { select: { id: true, name: true, email: true, phone: true } },
-      customer_address: true,
-      outlet: true,
-      driver: { select: { id: true, name: true, phone: true } },
-      order: {
-        include: {
-          order_item: {
-            include: {
-              laundry_item: true,
-            },
-          },
-          payment: true,
-        },
-      },
-    },
-  });
-  if (!pickupRequest) throw createCustomError(404, 'Pickup request not found');
-  return pickupRequest;
-}
-
-export async function getPickupRequestById(id: string, customerId?: string) {
-  const pickupRequest = await fetchPickupRequest(id);
-  PickupValidationHelper.validatePickupOwnership(
-    pickupRequest.customer_id,
-    customerId
-  );
-  return pickupRequest;
-}
-
-export async function cancelPickupRequest(id: string, customerId: string) {
-  const pickupRequest = await prisma.pickup_Request.findUnique({
-    where: { id },
-  });
-  if (!pickupRequest) throw createCustomError(404, 'Pickup request not found');
-
-  PickupValidationHelper.validateCancellable(pickupRequest, customerId);
-
-  return prisma.pickup_Request.update({
-    where: { id },
-    data: { status: 'CANCELLED' },
-  });
-}
-

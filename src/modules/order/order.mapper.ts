@@ -2,7 +2,7 @@ import { OrderQueryHelper } from './order.query.helper';
 
 export class OrderMapper {
   static toOrderResponse(pickup: any) {
-    const orderData = pickup.order?.[0];
+    const orderData = pickup.orders?.[0];
 
     const mappedStatus = OrderQueryHelper.mapPickupStatusToOrderStatus(
       pickup.status
@@ -14,7 +14,7 @@ export class OrderMapper {
     }
 
     // Check if there is a successful payment
-    const payments = orderData?.payment || [];
+    const payments = orderData?.payments || [];
     const isPaid = payments.some((p: any) => p.status === 'PAID');
 
     if (isPaid && (status === 'CREATED' || status === 'WAITING_PAYMENT')) {
@@ -23,7 +23,7 @@ export class OrderMapper {
 
     return {
       id: pickup.id,
-      order_id: pickup.order?.[0]?.id || '',
+      order_id: pickup.orders?.[0]?.id || '',
       pickup_request_id: pickup.id,
       outlet_id: pickup.assigned_outlet_id,
       outlet_admin_id: '',
@@ -31,20 +31,20 @@ export class OrderMapper {
       price_total: orderData?.price_total || 0,
       status: status,
       paid_at: null,
-      created_at: pickup.created_at.toISOString(),
+      createdAt: pickup.createdAt.toISOString(),
       updated_at: pickup.updated_at.toISOString(),
       pickup_request: {
         id: pickup.id,
-        customer_address: {
-          id: pickup.customer_address.id,
-          address: pickup.customer_address.address,
-          city: pickup.customer_address.city,
-          postal_code: pickup.customer_address.postal_code,
+        address: {
+          id: pickup.address.id,
+          address: pickup.address.address,
+          city: pickup.address.city,
+          postal_code: pickup.address.postal_code,
         },
       },
-      order_item: orderData?.order_item || [],
+      order_items: orderData?.order_items || [],
       driver_task: pickup.driver ? [{ driver: pickup.driver }] : [],
-      payment: orderData?.payment || [],
+      payments: orderData?.payments || [],
     };
   }
 
@@ -62,7 +62,7 @@ export class OrderMapper {
       total_weight: order.total_weight,
       price_total: order.price_total,
       status: (() => {
-        const payments = order.payment || [];
+        const payments = order.payments || [];
         const isPaid = payments.some((p: any) => p.status === 'PAID');
         if (
           isPaid &&
@@ -73,18 +73,18 @@ export class OrderMapper {
         return order.status;
       })(),
       paid_at: order.paid_at,
-      created_at: order.created_at,
+      createdAt: order.createdAt,
       updated_at: order.updated_at,
       pickup_request: {
         id: order.pickup_request.id,
-        customer_address: order.pickup_request.customer_address,
-        created_at: order.pickup_request.created_at,
+        address: order.pickup_request.address,
+        createdAt: order.pickup_request.createdAt,
       },
-      order_item: order.order_item,
+      order_items: order.order_items,
       driver_task: order.pickup_request.driver
         ? [{ driver: order.pickup_request.driver }]
         : [],
-      payment: order.payment,
+      payments: order.payments,
     };
   }
 }

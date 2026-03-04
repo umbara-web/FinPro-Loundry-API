@@ -41,7 +41,7 @@ export const getActiveJobService = async (driver_id: string) => {
         },
         include: {
           customer: { select: { name: true, phone: true } },
-          customer_address: true,
+          address: true,
         },
       }),
       prisma.driver_Task.findFirst({
@@ -57,7 +57,7 @@ export const getActiveJobService = async (driver_id: string) => {
               pickup_request: {
                 include: {
                   customer: { select: { name: true, phone: true } },
-                  customer_address: true,
+                  address: true,
                 },
               },
             },
@@ -117,14 +117,14 @@ export const getDriverHistoryService = async (
         where: {
           assigned_driver_id: driver_id,
           status: 'ARRIVED_OUTLET',
-          ...(dateFilter ? { updated_at: dateFilter } : {}),
+          ...(dateFilter ? { updatedAt: dateFilter } : {}),
         },
         include: {
           customer: { select: { name: true } },
-          customer_address: { select: { address: true } },
-          order: { select: { id: true } },
+          address: { select: { address: true } },
+          orders: { select: { id: true } },
         },
-        orderBy: { updated_at: 'desc' },
+        orderBy: { updatedAt: 'desc' },
         take: fetchLimit,
       }),
       prisma.driver_Task.findMany({
@@ -139,7 +139,7 @@ export const getDriverHistoryService = async (
               pickup_request: {
                 include: {
                   customer: { select: { name: true } },
-                  customer_address: { select: { address: true } },
+                  address: { select: { address: true } },
                 },
               },
             },
@@ -154,12 +154,12 @@ export const getDriverHistoryService = async (
       ...completedPickups.map((p) => ({
         id: p.id,
         type: 'PICKUP' as const,
-        order_number: p.order[0]?.id
-          ? `ORD-${p.order[0].id.slice(-4).toUpperCase()}`
+        order_number: p.orders[0]?.id
+          ? `ORD-${p.orders[0].id.slice(-4).toUpperCase()}`
           : `PKP-${p.id.slice(-4).toUpperCase()}`,
         customer_name: p.customer?.name || 'N/A',
-        address: p.customer_address?.address || 'N/A',
-        completed_at: p.updated_at,
+        address: p.address?.address || 'N/A',
+        completed_at: p.updatedAt,
         status: 'SELESAI',
       })),
       ...completedDeliveries.map((d) => ({
@@ -167,8 +167,8 @@ export const getDriverHistoryService = async (
         type: 'DELIVERY' as const,
         order_number: `ORD-${d.order_id.slice(-4).toUpperCase()}`,
         customer_name: d.order?.pickup_request?.customer?.name || 'N/A',
-        address: d.order?.pickup_request?.customer_address?.address || 'N/A',
-        completed_at: d.finished_at || d.order.updated_at,
+        address: d.order?.pickup_request?.address?.address || 'N/A',
+        completed_at: d.finished_at || d.order.updatedAt,
         status: 'SELESAI',
       })),
     ].sort(
@@ -182,7 +182,7 @@ export const getDriverHistoryService = async (
         where: {
           assigned_driver_id: driver_id,
           status: 'ARRIVED_OUTLET',
-          ...(dateFilter ? { updated_at: dateFilter } : {}),
+          ...(dateFilter ? { updatedAt: dateFilter } : {}),
         },
       }),
       prisma.driver_Task.count({
@@ -229,7 +229,7 @@ export const getAvailablePickupsService = async (driver_id: string) => {
       },
       include: {
         customer: { select: { name: true, phone: true } },
-        customer_address: true,
+        address: true,
       },
     });
   } catch (error) {
@@ -257,7 +257,7 @@ export const getPickupByIdService = async (
       },
       include: {
         customer: { select: { name: true, phone: true } },
-        customer_address: true,
+        address: true,
         outlet: true,
       },
     });
@@ -330,7 +330,7 @@ export const getAvailableDeliveriesService = async (driver_id: string) => {
       },
       include: {
         pickup_request: {
-          include: { customer_address: true, customer: true },
+          include: { address: true, customer: true },
         },
       },
     });
@@ -412,7 +412,7 @@ export const getDeliveryByIdService = async (
             pickup_request: {
               include: {
                 customer: { select: { name: true, phone: true } },
-                customer_address: true,
+                address: true,
                 outlet: {
                   select: { name: true, address: true, lat: true, long: true },
                 },

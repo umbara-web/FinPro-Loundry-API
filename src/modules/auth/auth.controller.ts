@@ -1,162 +1,111 @@
 import { Request, Response, NextFunction } from 'express';
-import {
-  registerUser,
-  verifyUser,
-  loginUser,
-  socialLogin,
-  requestResetPassword as requestResetPasswordService,
-  resetPassword as resetPasswordService,
-  getMe as getMeService,
-  resendVerification as resendVerificationService,
-} from './auth.service';
+import { AuthService } from './auth.service';
+import { sendResponse } from '../../core/utils/response.util';
+import { BadRequestError } from '../../core/exceptions/BadRequestError';
 
-export async function register(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
-  try {
-    const result = await registerUser(req.body);
+const authService = new AuthService();
 
-    res.status(201).json({
-      message: 'OK',
-      data: result,
-    });
-  } catch (error) {
-    next(error);
+export class AuthController {
+  async register(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await authService.registerUser(req.body);
+      return sendResponse(res, 201, result.message, result);
+    } catch (error) {
+      next(error);
+    }
   }
-}
 
-export async function verify(req: Request, res: Response, next: NextFunction) {
-  try {
-    const result = await verifyUser(req.body);
-
-    res.status(200).json({
-      message: 'OK',
-      data: result,
-    });
-  } catch (error) {
-    next(error);
+  async verify(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await authService.verifyUser(req.body);
+      return sendResponse(res, 200, result.message, result);
+    } catch (error) {
+      next(error);
+    }
   }
-}
 
-export async function login(req: Request, res: Response, next: NextFunction) {
-  try {
-    const result = await loginUser(req.body);
+  async login(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await authService.loginUser(req.body);
 
-    res.cookie('auth_token', result.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 24 * 60 * 60 * 1000, // 1 day
-    });
+      res.cookie('auth_token', result.token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 24 * 60 * 60 * 1000, // 1 day
+      });
 
-    res.status(200).json({
-      message: 'Login successful',
-      data: result,
-    });
-  } catch (error) {
-    next(error);
+      return sendResponse(res, 200, 'Login successful', result);
+    } catch (error) {
+      next(error);
+    }
   }
-}
 
-export async function getMe(req: Request, res: Response, next: NextFunction) {
-  try {
-    const user = req.user;
-    if (!user) throw new Error('Unauthorized');
+  async getMe(req: Request, res: Response, next: NextFunction) {
+    try {
+      const user = req.user as any;
+      if (!user) throw new BadRequestError('Unauthorized');
 
-    const result = await getMeService(user.userId);
-
-    res.status(200).json({
-      message: 'OK',
-      data: result,
-    });
-  } catch (error) {
-    next(error);
+      const result = await authService.getMe(user.userId);
+      return sendResponse(res, 200, 'OK', result);
+    } catch (error) {
+      next(error);
+    }
   }
-}
 
-export async function logout(req: Request, res: Response, next: NextFunction) {
-  try {
-    res.clearCookie('auth_token');
-    res.status(200).json({
-      message: 'Logout successful',
-    });
-  } catch (error) {
-    next(error);
+  async logout(req: Request, res: Response, next: NextFunction) {
+    try {
+      res.clearCookie('auth_token');
+      return sendResponse(res, 200, 'Logout successful');
+    } catch (error) {
+      next(error);
+    }
   }
-}
 
-export async function socialLoginController(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
-  try {
-    const result = await socialLogin(req.body);
+  async socialLoginController(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await authService.socialLogin(req.body);
 
-    res.cookie('auth_token', result.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 24 * 60 * 60 * 1000, // 1 day
-    });
+      res.cookie('auth_token', result.token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 24 * 60 * 60 * 1000,
+      });
 
-    res.status(200).json({
-      message: 'Social login successful',
-      data: result,
-    });
-  } catch (error) {
-    next(error);
+      return sendResponse(res, 200, 'Social login successful', result);
+    } catch (error) {
+      next(error);
+    }
   }
-}
 
-export async function requestResetPassword(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
-  try {
-    const result = await requestResetPasswordService(req.body);
-
-    res.status(200).json({
-      message: 'Reset password email sent',
-      data: result,
-    });
-  } catch (error) {
-    next(error);
+  async requestResetPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await authService.requestResetPassword(req.body);
+      return sendResponse(res, 200, result.message, result);
+    } catch (error) {
+      next(error);
+    }
   }
-}
 
-export async function resetPassword(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
-  try {
-    const result = await resetPasswordService(req.body);
-
-    res.status(200).json({
-      message: 'Password reset successfully',
-      data: result,
-    });
-  } catch (error) {
-    next(error);
+  async resetPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await authService.resetPassword(req.body);
+      return sendResponse(res, 200, result.message, result);
+    } catch (error) {
+      next(error);
+    }
   }
-}
 
-export async function resendVerificationEmail(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
-  try {
-    const { email } = req.body;
-    const result = await resendVerificationService(email);
-
-    res.status(200).json({
-      message: 'Verification email resent',
-      data: result,
-    });
-  } catch (error) {
-    next(error);
+  async resendVerificationEmail(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const { email } = req.body;
+      const result = await authService.resendVerification(email);
+      return sendResponse(res, 200, result.message, result);
+    } catch (error) {
+      next(error);
+    }
   }
 }

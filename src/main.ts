@@ -19,31 +19,23 @@ import {
   requireSuperAdmin,
 } from './admin/middleware/auth.middleware';
 
-// Routers
-import router from './routes'; // Generic /api routers
-import { initOrderCron } from './modules/order/order.cron';
+// --- Enterprise Namespace Routers ---
+import customerRouter from './routers/customer.routes';
+import adminRouter from './routers/admin.routes';
+import posRouter from './routers/pos.routes';
+import driverRouter from './routers/driver.routes';
 
-// Admin Routers
-import addressRouter from './admin/router/address.router';
-import itemRouter from './admin/router/item.router';
-import outletRouter from './admin/router/outlet.router';
-import workerRouter from './admin/router/worker.router';
-import orderRouter from './admin/router/order.router';
+import legacyRouter from './routes'; // Keeping old routes for backwards compatibility during transition
+import { initOrderCron } from './modules/order/order.cron';
 
 const app = express();
 const SERVER_PORT = PORT || 8000;
 
 // --- Global Middleware ---
-
-app.use(
-  helmet({
-    crossOriginResourcePolicy: { policy: 'cross-origin' },
-  })
-);
-
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(
   cors({
-    origin: NEXT_PUBLIC_WEB_URL || 'http://localhost:3000', // Fallback to localhost
+    origin: NEXT_PUBLIC_WEB_URL || 'http://localhost:3000',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
@@ -58,65 +50,59 @@ app.use('/public', express.static(path.join(__dirname, '../public')));
 // Request Logging Middleware
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
-  if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
-    // CAUTION: Avoid logging sensitive data in production
-    // console.log('Request body:', req.body);
-  }
   next();
 });
 
-// --- Routes Registration ---
+// --- Enterprise SaaS Namespace Routing ---
+// These prefixes cleanly separate client requests and allow specific rate-limiting/security per client
+app.use('/api/v1/customer', customerRouter); // Used by Customer Web/Mobile App
+app.use('/api/v1/admin', authenticateJWT, adminRouter); // Used by SuperAdmin/Franchise Dashboard
+app.use('/api/v1/pos', authenticateJWT, posRouter); // Used by Outlet Workers Tablet POS
+app.use('/api/v1/driver', authenticateJWT, driverRouter); // Used by Delivery Drivers App
 
-// 1. Admin API Routes (Must be registered BEFORE generic /api router)
-// These routes are specific and should take precedence.
-app.use('/api/addresses', authenticateJWT, requireSuperAdmin, addressRouter);
-app.use('/api/items', authenticateJWT, requireSuperAdmin, itemRouter);
-app.use('/api/outlets', authenticateJWT, outletRouter);
-app.use('/api/workers', authenticateJWT, workerRouter);
-app.use('/api/admin/orders', authenticateJWT, orderRouter); // Renamed to avoid collision
-
-// 2. Generic API Router
-// Handles other modules like /auth, /users, etc.
-app.use('/', router);
+// --- Legacy API Router (For Backwards Compatibility) ---
+// Note: Can be removed once React frontends are updated to call `/api/v1/customer/...`
+app.use('/', legacyRouter);
 
 // 3. Root Endpoint
 app.get('/', (req, res) => {
-  res.json({ message: 'Server is running', service: 'FinnPro Laundry API' });
+  res.json({
+    message: 'Server is running',
+    service: 'FinnPro Laundry Enterprise API',
+  });
 });
 
 // --- Error Handling ---
-
-// Application-level error handler
-app.use(errorMiddleware);
-
-// Fallback for unhandled routes (404)
+app.use(errorMiddleware); // Replaced with our new Class-based exception handler
 app.use((req, res) => {
   res.status(404).json({ error: 'Endpoint not found' });
 });
 
 // --- Server Startup ---
-
 async function startServer() {
   try {
-    // verify database connection
     await prisma.$connect();
     console.log('✅ Database connected successfully');
 
-    // start cron jobs
     initOrderCron();
     console.log('⏰ Order cron job initialized');
 
     app.listen(SERVER_PORT, () => {
       logger.info(`🚀 Server is running on port ${SERVER_PORT}`);
-      console.log(`📡 API endpoint: http://localhost:${SERVER_PORT}/api/`);
-      console.log(`📡 Admin endpoint: http://localhost:${SERVER_PORT}/api/admin`);
+      console.log(
+        `📡 Customer App endpoint: http://localhost:${SERVER_PORT}/api/v1/customer`
+      );
+      console.log(
+        `📡 Admin Dashboard endpoint: http://localhost:${SERVER_PORT}/api/v1/admin`
+      );
+      console.log(
+        `📡 POS Endpoint: http://localhost:${SERVER_PORT}/api/v1/pos`
+      );
     });
   } catch (error) {
     console.error('❌ Database connection failed:', error);
-    console.error('Please check your DATABASE_URL in .env file');
-    process.exit(1); // Exit if DB connection fails
+    process.exit(1);
   }
 }
 
-// Start the server
 startServer();

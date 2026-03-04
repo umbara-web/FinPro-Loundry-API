@@ -109,14 +109,14 @@ export const getBypassRequestsService = async (outletId: string) => {
                 profile_picture_url: true,
               },
             },
-            station_task_item: {
+            station_task_items: {
               include: {
                 laundry_item: true,
               },
             },
             order: {
               include: {
-                order_item: {
+                order_items: {
                   include: {
                     laundry_item: true,
                   },
@@ -141,12 +141,12 @@ export const getBypassRequestsService = async (outletId: string) => {
       station: req.station_task.task_type,
       reason: req.reason,
       createdAt: req.station_task.started_at, // Approximate timestamp
-      items: req.station_task.station_task_item.map((item) => ({
+      items: req.station_task.station_task_items.map((item) => ({
         id: item.laundry_item_id,
         name: item.laundry_item.name,
         qty: item.qty,
         expectedQty:
-          req.station_task.order.order_item.find(
+          req.station_task.order.order_items.find(
             (oi) => oi.laundry_item_id === item.laundry_item_id
           )?.qty || 0,
       })),
@@ -167,10 +167,10 @@ export const handleBypassRequestService = async (
       include: {
         station_task: {
           include: {
-            station_task_item: true,
+            station_task_items: true,
             order: {
               include: {
-                payment: true,
+                payments: true,
               },
             },
           },
@@ -237,7 +237,7 @@ export const handleBypassRequestService = async (
           const isPaid =
             order?.status === 'PAID' ||
             order?.paid_at != null ||
-            order?.payment?.some((p: any) => p.status === 'PAID');
+            order?.payments?.some((p: any) => p.status === 'PAID');
 
           const newStatus = isPaid ? 'READY_FOR_DELIVERY' : 'WAITING_PAYMENT';
 
@@ -281,14 +281,14 @@ export const getDashboardStatsService = async (outletId: string) => {
       prisma.order.count({
         where: {
           outlet_id: outletId,
-          created_at: { gte: startOfToday },
+          createdAt: { gte: startOfToday },
         },
       }),
       // Orders created yesterday (for trend)
       prisma.order.count({
         where: {
           outlet_id: outletId,
-          created_at: { gte: startOfYesterday, lt: startOfToday },
+          createdAt: { gte: startOfYesterday, lt: startOfToday },
         },
       }),
       // Pending orders
@@ -353,12 +353,11 @@ export const processOrderService = async (
     where: { id: orderId },
     include: {
       pickup_request: true,
-      order_item: true,
+      order_items: true,
     },
   });
 
   if (!order) throw new Error('Order not found');
-
 
   if (order.status !== Order_Status.CREATED) {
     // Allow processing even if status is not strictly CREATED, but it should be in a state before washing.
@@ -373,7 +372,7 @@ export const processOrderService = async (
   return await prisma.$transaction(async (tx) => {
     // Update Order Items
     for (const item of items) {
-      const existingItem = order.order_item.find(
+      const existingItem = order.order_items.find(
         (oi) => oi.laundry_item_id === item.laundry_item_id
       );
 

@@ -1,115 +1,109 @@
 import { Request, Response, NextFunction } from 'express';
 import {
-  createPickupRequest,
-  getPickupRequestsByCustomer,
-  getPickupRequestById,
-  cancelPickupRequest,
+  PickupService,
   findNearestOutletByCoordinates,
 } from './pickup.service';
+import { sendResponse } from '../../core/utils/response.util';
+import { BadRequestError } from '../../core/exceptions/BadRequestError';
 
-export async function findNearestOutlet(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
-  try {
-    const { lat, long } = req.query;
-    if (!lat || !long)
-      return res.status(400).json({ error: 'lat and long are required' });
+export class PickupController {
+  static async findNearestOutlet(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const { lat, long } = req.query;
+      if (!lat || !long) {
+        throw new BadRequestError('lat and long are required');
+      }
 
-    const result = await findNearestOutletByCoordinates(
-      lat as string,
-      long as string
-    );
-    res.status(200).json({ message: 'OK', data: result });
-  } catch (error) {
-    next(error);
+      const result = await findNearestOutletByCoordinates(
+        lat as string,
+        long as string
+      );
+      return sendResponse(res, 200, 'OK', result);
+    } catch (error) {
+      next(error);
+    }
   }
-}
 
-export async function createPickup(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
-  try {
-    const customerId = req.user?.userId;
-    if (!customerId) return res.status(401).json({ error: 'Unauthorized' });
+  static async createPickup(req: Request, res: Response, next: NextFunction) {
+    try {
+      const customerId = (req as any).user?.userId;
+      if (!customerId) throw new BadRequestError('Unauthorized');
 
-    const {
-      addressId,
-      schedulledPickupAt,
-      notes,
-      outletId,
-      items,
-      manualItems,
-    } = req.body;
-    const result = await createPickupRequest({
-      customerId,
-      addressId,
-      scheduledPickupAt: new Date(schedulledPickupAt),
-      notes,
-      outletId,
-      items,
-      manualItems,
-    });
+      const {
+        addressId,
+        schedulledPickupAt,
+        notes,
+        outletId,
+        items,
+        manualItems,
+      } = req.body;
 
-    res
-      .status(201)
-      .json({ message: 'Pickup request created successfully', data: result });
-  } catch (error) {
-    next(error);
+      const result = await PickupService.createPickupRequest({
+        customerId,
+        addressId,
+        scheduledPickupAt: new Date(schedulledPickupAt),
+        notes,
+        outletId,
+        items,
+        manualItems,
+      });
+
+      return sendResponse(
+        res,
+        201,
+        'Pickup request created successfully',
+        result
+      );
+    } catch (error) {
+      next(error);
+    }
   }
-}
 
-export async function getMyPickups(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
-  try {
-    const customerId = req.user?.userId;
-    if (!customerId) return res.status(401).json({ error: 'Unauthorized' });
+  static async getMyPickups(req: Request, res: Response, next: NextFunction) {
+    try {
+      const customerId = (req as any).user?.userId;
+      if (!customerId) throw new BadRequestError('Unauthorized');
 
-    const result = await getPickupRequestsByCustomer(customerId);
-    res.status(200).json({ message: 'OK', data: result });
-  } catch (error) {
-    next(error);
+      const result =
+        await PickupService.getPickupRequestsByCustomer(customerId);
+      return sendResponse(res, 200, 'OK', result);
+    } catch (error) {
+      next(error);
+    }
   }
-}
 
-export async function getPickupById(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
-  try {
-    const customerId = req.user?.userId;
-    const { id } = req.params;
+  static async getPickupById(req: Request, res: Response, next: NextFunction) {
+    try {
+      const customerId = (req as any).user?.userId;
+      const { id } = req.params;
 
-    const result = await getPickupRequestById(id, customerId);
-    res.status(200).json({ message: 'OK', data: result });
-  } catch (error) {
-    next(error);
+      const result = await PickupService.getPickupRequestById(id, customerId);
+      return sendResponse(res, 200, 'OK', result);
+    } catch (error) {
+      next(error);
+    }
   }
-}
 
-export async function cancelPickup(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
-  try {
-    const customerId = req.user?.userId;
-    if (!customerId) return res.status(401).json({ error: 'Unauthorized' });
+  static async cancelPickup(req: Request, res: Response, next: NextFunction) {
+    try {
+      const customerId = (req as any).user?.userId;
+      if (!customerId) throw new BadRequestError('Unauthorized');
 
-    const { id } = req.params;
-    const result = await cancelPickupRequest(id, customerId);
+      const { id } = req.params;
+      const result = await PickupService.cancelPickupRequest(id, customerId);
 
-    res
-      .status(200)
-      .json({ message: 'Pickup request cancelled successfully', data: result });
-  } catch (error) {
-    next(error);
+      return sendResponse(
+        res,
+        200,
+        'Pickup request cancelled successfully',
+        result
+      );
+    } catch (error) {
+      next(error);
+    }
   }
 }

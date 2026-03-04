@@ -46,7 +46,7 @@ export class ComplaintService {
       where: {
         order_id: orderId,
         customer_id: customerId,
-        status: { in: ['OPEN', 'IN_REVIEW'] },
+        status: { in: ['PENDING'] },
       },
     });
 
@@ -60,10 +60,8 @@ export class ComplaintService {
       data: {
         order_id: params.orderId,
         customer_id: params.customerId,
-        type: params.type,
-        description: params.description,
-        images: params.images || [],
-        status: 'OPEN',
+        complaint: params.description,
+        status: 'PENDING',
       },
       include: {
         order: {
@@ -84,7 +82,7 @@ export class ComplaintService {
       page,
       limit,
       status,
-      sortBy = 'created_at',
+      sortBy = 'createdAt',
       sortOrder = 'desc',
       search,
     } = params;
@@ -131,7 +129,7 @@ export class ComplaintService {
             status: true,
             total_weight: true,
             price_total: true,
-            created_at: true,
+            createdAt: true,
           },
         },
       },
@@ -148,8 +146,8 @@ export class ComplaintService {
             status: true,
             total_weight: true,
             price_total: true,
-            created_at: true,
-            order_item: { include: { laundry_item: true } },
+            createdAt: true,
+            order_items: { include: { laundry_item: true } },
           },
         },
       },

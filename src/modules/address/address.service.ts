@@ -15,7 +15,7 @@ function transformAddress(addr: any) {
     latitude: parseFloat(addr.lat),
     longitude: parseFloat(addr.long),
     isPrimary: addr.is_primary || false,
-    createdAt: addr.created_at,
+    createdAt: addr.createdAt,
     updatedAt: addr.updated_at,
   };
 }
@@ -42,7 +42,7 @@ async function unsetPrimaryAddresses(userId: string, excludeId?: string) {
 export const getUserAddresses = async (userId: string) => {
   const addresses = await prisma.customer_Address.findMany({
     where: { customer_id: userId },
-    orderBy: [{ is_primary: 'desc' }, { created_at: 'desc' }],
+    orderBy: [{ is_primary: 'desc' }, { createdAt: 'desc' }],
   });
   return addresses.map(transformAddress);
 };
